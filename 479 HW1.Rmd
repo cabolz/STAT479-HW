@@ -8,54 +8,10 @@ header-includes:
     - \hypersetup {colorlinks = true, linkcolor = red, urlcolor = red}
 ---
 
-```{r}
-
-```
-
-
 ```{r, echo = FALSE}
 library("knitr")
 opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 ```
-
-## Instructions
-
-1. Submit your solutions to the exercises below before **February 5 at 11:59pm
-CST**.
-2. Prepare your solutions as Rmarkdown documents. For problems in vega-lite,
-copy your code into the `.Rmd`, making sure to enclose them within `js` blocks,
-
-`````
-````js
-// your code here
-````
-`````
-
-so that the syntax is properly highlighted, e.g.,
-
-````js
-// your code here
-````
-
-3. For vega-lite problems, include a screenshot of your result.
-4. We give example figures below to guide your work. However, view these only as
-suggestions -- we will keep an eye out for improvements over our plots.
-5. Include two files in your submission, (a) a pdf of the compiled `.Rmd` file
-and (b) the original `.Rmd` file.
-
-## Rubric
-
-2 problems below will be graded according to,
-
-* Correctness: For plots, the displays meet the required specifications. For
-conceptual questions, all parts are accurately addressed.
-* Attention to detail: Writing is clear and designs are elegant. For example, no
-superfluous marks are included, all axes are labeled, text is neither too small
-nor too large.
-* Code quality (if applicable): Code is concise but readable, properly formatted
-and commented.
-
-The remaining problems will be graded for completeness.
 
 ## Problems
 
