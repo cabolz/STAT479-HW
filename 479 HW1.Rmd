@@ -16,31 +16,23 @@ opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 # Problems
 
 ## (1) Ikea Furniture
-
-The dataset below shows prices of pieces of Ikea furniture. We will compare
-prices of different furniture categories and label the (relatively few) articles
-which cannot be bought online.
-
 ```{r}
 library("readr")
 library("ggplot2")
+library(dplyr)
+library(ggrepel)
 ikea <- read_csv("https://uwmadison.box.com/shared/static/iat31h1wjg7abhd2889cput7k264bdzd.csv")
 ```
 
 ### Part A
-a. Make a plot that shows the relationship between the `category` of furniture
-and `price` (on a log-scale). Show each `item_id` as a point -- do not aggregate
-to boxplots or ridgelines -- but make sure to jitter and adjust the size the
-points to reduce the amount of overlap. _Hint: use the `geom_jitter` layer._
 ```{r}
 ggplot(ikea) + geom_point(aes(x = category, y = price)) + scale_y_log10() + geom_jitter(aes(x = category, y = price)) + theme(axis.text.x = element_text(angle = 60, hjust = 1)) + xlab("Furniture Category") + ylab("Log Price")
 ```
  
 
 ### Part B
-b. Modify the plot in (a) so that categories are sorted from those with highest
-to lowest average prices.
 ```{r}
+ikea$category = with(ikea, reorder(category, -price, mean))
 ggplot(ikea) + geom_point(aes(x = category, y = price)) + scale_y_log10() + geom_jitter(aes(x = category, y = price)) + theme(axis.text.x = element_text(angle = 60, hjust = 1)) + xlab("Furniture Category") + ylab("Log Price")
 ```
 
@@ -49,7 +41,17 @@ c. Color points according to whether they can be purchased online. If they
 cannot be purchased online, add a text label giving the name of that item of
 furniture. An example result is given by Figure 1.
 ```{r}
-
+highlight_df <- ikea %>% 
+             filter(sellable_online == F)
+ggplot(ikea) + 
+  geom_point(aes(x = category, y = price), col = 'gray70') + 
+  scale_y_log10() + 
+  geom_jitter(aes(x = category, y = price), col = 'gray70') + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+  xlab("Furniture Category") + 
+  ylab("Log Price") + 
+  geom_point(data = highlight_df, aes(x = category, y = price), color = 'red') + 
+  geom_label_repel(data = highlight_df, aes(x = category, y = price), label = highlight_df$name, hjust =1, vjust = 0, col ='purple', size = 3, max.overlaps = 50)
 ```
 
 ## (2) Penguins
