@@ -1,3 +1,6 @@
 base
 knitr
 readr
+ggplot2
+dplyr
+ggrepel
