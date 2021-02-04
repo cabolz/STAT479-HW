@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/W32TeX) (preloaded format=pdflatex 2020.10.6)  3 FEB 2021 16:45
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/W32TeX) (preloaded format=pdflatex 2020.10.6)  4 FEB 2021 13:21
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -537,58 +537,75 @@ File: t1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
 )
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 114.
-<479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf, id=44, 469.755pt x 325.215pt
+<479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf, id=60, 469.755pt x 325.215pt
 >
 File: 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf  used
- on input line 151.
+ on input line 152.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 [1
 
 {c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdfte
 x.map}]
-<479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf, id=60, 469.755pt x 325.215pt
+<479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf, id=76, 469.755pt x 325.215pt
 >
 File: 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf  used
- on input line 173.
+ on input line 174.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 [2 <./479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf>]
-<479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf, id=71, 469.755pt x 325.215pt
+<479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf, id=87, 469.755pt x 325.215pt
 >
 File: 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf  used
- on input line 197.
+ on input line 200.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[3 <./479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf>]
+[3 <./479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf>] [4 <./479-HW1_files/fi
+gure-latex/unnamed-chunk-6-1.pdf>]
 
-LaTeX Warning: Reference `fig:3' on page 4 undefined on input line 244.
+LaTeX Warning: Reference `fig:3' on page 5 undefined on input line 265.
 
-[4 <./479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf>]
+<479-HW1_files/figure-latex/unnamed-chunk-9-1.pdf, id=112, 469.755pt x 325.215p
+t>
+File: 479-HW1_files/figure-latex/unnamed-chunk-9-1.pdf Graphic file (type pdf)
+<use 479-HW1_files/figure-latex/unnamed-chunk-9-1.pdf>
+Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-9-1.pdf  used
+ on input line 297.
+(pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
+[5]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 286.
+(Font)              <10> on input line 308.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 286.
+(Font)              <7> on input line 308.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 286.
-[5] [6] (./479-HW1.aux)
+(Font)              <5> on input line 308.
+</Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg, id=122, 424.58624pt
+ x 560.59438pt>
+File: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg Graphic file (t
+ype jpg)
+<use /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg>
+Package pdftex.def Info: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.
+jpg  used on input line 344.
+(pdftex.def)             Requested size: 424.60463pt x 560.61865pt.
+[6 <./479-HW1_files/figure-latex/unnamed-chunk-9-1.pdf>] [7 </Users/bolzc/OneDr
+ive/Documents/STAT479-HW/Q6-Graphic.jpg>] [8] (./479-HW1.aux)
 Package rerunfilecheck Info: File `479-HW1.out' has not changed.
-(rerunfilecheck)             Checksum: CC4DD4640D50BB30A9FC0521C80987D3;1257.
+(rerunfilecheck)             Checksum: C8AA99AB597609FED3E116F39E116F61;1617.
 
 LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 10918 strings out of 481885
- 158237 string characters out of 5930447
- 442274 words of memory out of 5000000
- 27006 multiletter control sequences out of 15000+600000
+ 10951 strings out of 481885
+ 159095 string characters out of 5930447
+ 439397 words of memory out of 5000000
+ 27025 multiletter control sequences out of 15000+600000
  585592 words of font info for 71 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 60i,6n,66p,598b,418s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,6n,66p,415b,347s stack positions out of 5000i,500n,10000p,200000b,80000s
 {c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-math
 it.enc}{c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm
 -mathsy.enc}{c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/
@@ -608,10 +625,10 @@ ta/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy7.pfb><c:/Users/bolzc/A
 ppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtk10.pfb><c:/Users/bo
 lzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb><c:/Use
 rs/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtti10.pfb>
-Output written on 479-HW1.pdf (6 pages, 1093501 bytes).
+Output written on 479-HW1.pdf (8 pages, 1274238 bytes).
 PDF statistics:
- 182 PDF objects out of 1000 (max. 8388607)
- 152 compressed objects within 2 object streams
- 35 named destinations out of 1000 (max. 500000)
- 96 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 225 PDF objects out of 1000 (max. 8388607)
+ 190 compressed objects within 2 object streams
+ 45 named destinations out of 1000 (max. 500000)
+ 138 words of extra memory for PDF output out of 10000 (max. 10000000)
 
