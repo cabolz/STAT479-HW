@@ -9,13 +9,13 @@ header-includes:
 ---
 
 ```{r, echo = FALSE}
-library("knitr")
 opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
-library("readr")
-library("ggplot2")
+library(knitr)
+library(readr)
+library(ggplot2)
 library(dplyr)
 library(ggrepel)
 library(ggridges)
@@ -80,38 +80,21 @@ ggplot(ikea) +
   )
 ```
 
-## (2) Penguins
 
-The data below measures properties of various antarctic penguins.
+## (2) Penguins
 
 ```{r}
 penguins <- read_csv("https://uwmadison.box.com/shared/static/ijh7iipc9ect1jf0z8qa2n3j7dgem1gh.csv")
-```
-
-
-ggplot(penguins, aes(bill_length_mm, y = species, fill = island)) +
-  geom_density_ridges(alpha = .7) +
-  scale_fill_brewer(palette = "Set2")
-
-ggplot(gapminder_subset, aes(dollars_per_day, fill = group, y = ..count..)) + 
-  geom_density(alpha = 0.7, bw = .12, position = "stack") + 
+ggplot(penguins) + 
+  geom_point(aes(bill_length_mm, bill_depth_mm, col = species, 
+                 shape = island)) +
   scale_fill_brewer(palette = "Set2") +
-  scale_x_log10(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0, 0.15, 0)) +
-  facet_grid(year ~ .)
-
-
-ggplot(penguins) +
-  geom_point(
-    aes(x = bill_length_mm, y = bill_depth_mm, col = species, group = island),
-      alpha = 0.7, size = 0.9
-  ) +
-  scale_color_brewer(palette = "Set2")
-
-
-
-i) How is bill length related to bill depth within and across species? 
-ii) On which islands are which species found?
+  labs(
+    x = "Bill Length (mm)",
+    y = "Bith Depth (mm)",
+    title = "Antartic Penguins Bill Length vs. Depth"
+  )
+```
 
 
 ## (3) 2012 London Olympics
@@ -195,7 +178,7 @@ average score within that combination. An example result is shown in Figure 5
 
 ## (6) Deconstruction
 
-![Article Visualization](\Users\bolzc\OneDrive\Documents\STAT479-HW\Q6-Graphic.jpg)
+![Q6: Article Visualization](\Users\bolzc\OneDrive\Documents\STAT479-HW\Q6-Graphic.jpg)
 
 ### Part A
 Below are what I think the example columns are. There would be a row associated with each name/ID number
