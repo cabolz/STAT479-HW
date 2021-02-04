@@ -18,6 +18,7 @@ library("readr")
 library("ggplot2")
 library(dplyr)
 library(ggrepel)
+library(ggridges)
 ```
 
 
@@ -87,8 +88,28 @@ The data below measures properties of various antarctic penguins.
 penguins <- read_csv("https://uwmadison.box.com/shared/static/ijh7iipc9ect1jf0z8qa2n3j7dgem1gh.csv")
 ```
 
-Using either vega-lite or ggplot2, create a single plot that makes it easy to
-answer both of these questions,
+```{r}
+ggplot(penguins, aes(bill_length_mm, y = species, fill = island)) +
+  geom_density_ridges(alpha = .7) +
+  scale_fill_brewer(palette = "Set2")
+
+ggplot(gapminder_subset, aes(dollars_per_day, fill = group, y = ..count..)) + 
+  geom_density(alpha = 0.7, bw = .12, position = "stack") + 
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_log10(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0, 0.15, 0)) +
+  facet_grid(year ~ .)
+
+
+ggplot(penguins) +
+  geom_point(
+    aes(x = bill_length_mm, y = bill_depth_mm, col = species, group = island),
+      alpha = 0.7, size = 0.9
+  ) +
+  scale_color_brewer(palette = "Set2")
+```
+
+
 i) How is bill length related to bill depth within and across species? 
 ii) On which islands are which species found?
 
@@ -143,6 +164,11 @@ traffic <- read_csv("https://uwmadison.box.com/shared/static/x0mp3rhhic78vufsxtg
 Each row is a timepoint of traffic within a city in Germany. Using
 `geom_ridges`, make a plot of traffic over time, within each of the cities. An
 example result is shown below.
+```{r}
+ggplot(traffic, aes(x = date, height = value, y = name)) +
+  geom_ridgeline(scale= .5)
+```
+
 
 ## (5) Language Learning
 
