@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/W32TeX) (preloaded format=pdflatex 2020.10.6)  6 FEB 2021 18:39
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/W32TeX) (preloaded format=pdflatex 2020.10.6)  6 FEB 2021 18:43
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -541,87 +541,88 @@ LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 
 {c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdfte
 x.map}]
-<479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf, id=81, 469.755pt x 325.215pt
+<479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf, id=87, 469.755pt x 325.215pt
 >
 File: 479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf  used
- on input line 196.
+ on input line 202.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[2 <./479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf>]
+[2]
 <479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf, id=94, 469.755pt x 325.215pt
 >
 File: 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf  used
- on input line 218.
+ on input line 224.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[3 <./479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf>]
+[3 <./479-HW1_files/figure-latex/unnamed-chunk-3-1.pdf>]
 <479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf, id=105, 469.755pt x 325.215p
 t>
 File: 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf  used
- on input line 244.
+ on input line 250.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[4 <./479-HW1_files/figure-latex/unnamed-chunk-5-1.pdf>]
-<479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf, id=116, 469.755pt x 325.215p
+[4 <./479-HW1_files/figure-latex/unnamed-chunk-4-1.pdf>] [5 <./479-HW1_files/fi
+gure-latex/unnamed-chunk-5-1.pdf>]
+<479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf, id=126, 469.755pt x 325.215p
 t>
 File: 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf  used
- on input line 288.
+ on input line 294.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-</Users/bolzc/OneDrive/Documents/STAT479-HW/Q3-Graphic.jpg, id=117, 463.7325pt 
+</Users/bolzc/OneDrive/Documents/STAT479-HW/Q3-Graphic.jpg, id=127, 463.7325pt 
 x 664.4825pt>
 File: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q3-Graphic.jpg Graphic file (t
 ype jpg)
 <use /Users/bolzc/OneDrive/Documents/STAT479-HW/Q3-Graphic.jpg>
 Package pdftex.def Info: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q3-Graphic.
-jpg  used on input line 295.
+jpg  used on input line 301.
 (pdftex.def)             Requested size: 453.95235pt x 650.46852pt.
 
-LaTeX Warning: Float too large for page by 23.98294pt on input line 297.
+LaTeX Warning: Float too large for page by 23.98294pt on input line 303.
 
-[5 <./479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf>] [6 </Users/bolzc/OneDr
+[6 <./479-HW1_files/figure-latex/unnamed-chunk-6-1.pdf>] [7 </Users/bolzc/OneDr
 ive/Documents/STAT479-HW/Q3-Graphic.jpg>]
-<479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf, id=133, 469.755pt x 325.215p
+<479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf, id=144, 469.755pt x 325.215p
 t>
 File: 479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf Graphic file (type pdf)
 <use 479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf>
 Package pdftex.def Info: 479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf  used
- on input line 360.
+ on input line 366.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[7] [8 <./479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf>]
-</Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg, id=157, 398.99063pt
+[8] [9 <./479-HW1_files/figure-latex/unnamed-chunk-7-1.pdf>]
+</Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg, id=167, 398.99063pt
  x 264.99pt>
 File: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg Graphic file (t
 ype jpg)
 <use /Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg>
 Package pdftex.def Info: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.
-jpg  used on input line 415.
+jpg  used on input line 421.
 (pdftex.def)             Requested size: 399.0079pt x 265.00146pt.
-</Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg, id=158, 424.58624pt
+</Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg, id=168, 424.58624pt
  x 560.59438pt>
 File: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg Graphic file (t
 ype jpg)
 <use /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg>
 Package pdftex.def Info: /Users/bolzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.
-jpg  used on input line 424.
+jpg  used on input line 430.
 (pdftex.def)             Requested size: 424.60463pt x 560.61865pt.
-[9 </Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg>] [10 </Users/bol
-zc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg>] [11] (./479-HW1.aux)
+[10 </Users/bolzc/OneDrive/Documents/STAT479-HW/Q5-Graphic.jpg>] [11 </Users/bo
+lzc/OneDrive/Documents/STAT479-HW/Q6-Graphic.jpg>] [12] (./479-HW1.aux)
 Package rerunfilecheck Info: File `479-HW1.out' has not changed.
-(rerunfilecheck)             Checksum: CC0429D0FDD489B710C72D139C69AAF7;1795.
+(rerunfilecheck)             Checksum: C9C9FFAAC49C277FA540B821DCA04389;1873.
  ) 
 Here is how much of TeX's memory you used:
- 10944 strings out of 481885
- 159788 string characters out of 5930447
- 440465 words of memory out of 5000000
- 27024 multiletter control sequences out of 15000+600000
+ 10949 strings out of 481885
+ 159833 string characters out of 5930447
+ 440497 words of memory out of 5000000
+ 27026 multiletter control sequences out of 15000+600000
  569298 words of font info for 55 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 60i,6n,66p,904b,466s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,6n,66p,904b,467s stack positions out of 5000i,500n,10000p,200000b,80000s
 {c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ec.e
 nc}<c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmb
 x10.pfb><c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/l
@@ -632,10 +633,10 @@ ype1/public/lm/lmr17.pfb><c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dist/fon
 ts/type1/public/lm/lmtk10.pfb><c:/Users/bolzc/AppData/Roaming/TinyTeX/texmf-dis
 t/fonts/type1/public/lm/lmtt10.pfb><c:/Users/bolzc/AppData/Roaming/TinyTeX/texm
 f-dist/fonts/type1/public/lm/lmtti10.pfb>
-Output written on 479-HW1.pdf (11 pages, 1471907 bytes).
+Output written on 479-HW1.pdf (12 pages, 1473731 bytes).
 PDF statistics:
- 219 PDF objects out of 1000 (max. 8388607)
- 183 compressed objects within 2 object streams
- 47 named destinations out of 1000 (max. 500000)
- 169 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 230 PDF objects out of 1000 (max. 8388607)
+ 193 compressed objects within 2 object streams
+ 50 named destinations out of 1000 (max. 500000)
+ 177 words of extra memory for PDF output out of 10000 (max. 10000000)
 
