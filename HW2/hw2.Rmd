@@ -13,6 +13,7 @@ library("dplyr")
 library("tidyr")
 library("readr")
 library(gridExtra)
+library(skimr)
 theme_set(theme_minimal())
 opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 ```
@@ -33,24 +34,23 @@ a. Propose an alternative arrangement of rows and columns that conforms to the t
 
 b. Implement your proposed arrangement from part (a).
 ```{r}
-plants = plants %>% pivot_longer(c(`height.0`, `height.7`, `height.14`, `height.21`), names_to = "height")
+plants = plants %>% pivot_longer(c(`height.0`, `height.7`, `height.14`, `height.21`), names_to = "height") %>%  separate(height, into = c("century", "Days"), sep = 7)  
 
-plants = plants %>% 
-  separate(height, into = c("century", "Days"), sep = 7)  
 plants = select(plants, -century)
 
 plants$Days = as.integer(plants$Days)
-str(plants)
 ```
 
 c. Using the data set from (b), create a version of Figure 1, showing the growth of the plants over time according to different treatments.
 ```{r}
-
-par(mfrow = c(2,2))
 ggplot(plants) + 
   geom_line(aes(x = Days, y = value, col = plantid)) +
-  facet_grid(. ~ treatment)
-grid.arrange(graph, nrow=2, ncol=2)
+  facet_grid(. ~ treatment) +
+  labs(
+    x = "Days",
+    y = "Plant Height",
+    title = "Plant Growth Experiment"
+  )
 ```
 
 
@@ -69,15 +69,31 @@ c. What have you learned from this visualization? Is there additional informatio
 This problem gives practice in deriving new variables to improve a faceted plot. The data below give attack and defense statistics for Pokemon, along with their types. We will build a visualization to answer the question -- how do the different types of Pokemon vary in their attack and defense potential?
 
 ```{r}
-pokemon <- read_csv("https://uwmadison.box.com/shared/static/hf5cmx3ew3ch0v6t0c2x56838er1lt2c.csv")
+pokemon = read_csv("https://uwmadison.box.com/shared/static/hf5cmx3ew3ch0v6t0c2x56838er1lt2c.csv")
 ```
 
 a. Derive a new column containing the attack-to-defense ratio, defined as
 $\frac{\text{Attack}}{\text{Defense}}$.
+```{r}
+pokemon = pokemon %>% mutate(rate = Attack / Defense)
+```
+
 
 b. For each `type_1` group of Pokemon, compute the median attack-to-defense ratio.
+```{r}
+pokemon %>% group_by(type_1) %>% summarise(avg_rate = median(rate))
+```
+
 
 c. Plot the attack vs. defense scores for each Pokemon, faceted by `type_1`. Use the result of (b) to ensure that the panels are sorted from types with highest to lowest attack-to-defense ratio. Your result should look similar to Figure 3.
+```{r}
+pokemon$rate = with(pokemon, reorder(type_1, -rate, mean))
+
+ggplot(pokemon) + 
+  geom_point(aes(x = Attack, y = Defense, col = Legendary)) +
+  facet_grid(. ~ type_1) +
+  geom_abline()
+```
 
 d. Propose, but do not implement, a visualization of this data set that makes use of dynamic queries. What questions would the visualization answer? What would be the structure of interaction, and how would the display update when the user provides a cue?
 
