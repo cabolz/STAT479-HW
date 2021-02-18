@@ -14,6 +14,7 @@ library("tidyr")
 library("readr")
 library(gridExtra)
 library(skimr)
+library("dslabs")
 theme_set(theme_minimal())
 opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 ```
@@ -45,7 +46,7 @@ c. Using the data set from (b), create a version of Figure 1, showing the growth
 ```{r}
 ggplot(plants) + 
   geom_line(aes(x = Days, y = value, col = plantid)) +
-  facet_grid(. ~ treatment) +
+  facet_wrap(. ~ treatment, ncol = 2) +
   labs(
     x = "Days",
     y = "Plant Height",
@@ -87,13 +88,24 @@ pokemon %>% group_by(type_1) %>% summarise(avg_rate = median(rate))
 
 c. Plot the attack vs. defense scores for each Pokemon, faceted by `type_1`. Use the result of (b) to ensure that the panels are sorted from types with highest to lowest attack-to-defense ratio. Your result should look similar to Figure 3.
 ```{r}
-pokemon$rate = with(pokemon, reorder(type_1, -rate, mean))
+type1_order <- pokemon %>%
+  group_by(type_1) %>%
+  summarise(avg_value = median(rate)) %>% 
+  arrange(desc(avg_value)) %>% 
+  pull(type_1)
 
+pokemon = pokemon %>% mutate(type_1 = factor(type_1, levels = type1_order))
+```
+
+```{r}
 ggplot(pokemon) + 
   geom_point(aes(x = Attack, y = Defense, col = Legendary)) +
-  facet_grid(. ~ type_1) +
-  geom_abline()
+  facet_wrap(. ~ type_1, ncol = 6) +
+  geom_abline()+
+  labs(title = "Attack vs. Defense Statistics for Different Pokemon")
 ```
+
+
 
 d. Propose, but do not implement, a visualization of this data set that makes use of dynamic queries. What questions would the visualization answer? What would be the structure of interaction, and how would the display update when the user provides a cue?
 
