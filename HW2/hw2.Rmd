@@ -6,46 +6,43 @@ header-includes:
     - \hypersetup {colorlinks = true, linkcolor = red, urlcolor = red}
 ---
 
-```{r, echo = FALSE}
-library("knitr")
-library("ggplot2")
-library("dplyr")
-library("tidyr")
-library("readr")
+```{r include=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
 library(gridExtra)
 library(skimr)
-library("dslabs")
-theme_set(theme_minimal())
+library(dslabs)
+library(naniar)
+library(simputation)
+libtheme_set(theme_minimal())
 opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
 ```
 
-
-## Problems
-
-### (1) Plant Growth Experiment
-
-This problem will give you practice with tidying a data set so that it can be easily visualized. The data describe the height of several plants measured every 7 days. The plants have been treated with different amounts of a growth stimulant. The first few rows are printed below -- `height.x` denotes the height of the plant on day `x`.
+# (1) Plant Growth Experiment
 
 ```{r}
-
 plants <- read.csv("https://uwmadison.box.com/shared/static/qg9gwk2ldjdtcmmmiropcunf34ddonya.csv")
 ```
 
-a. Propose an alternative arrangement of rows and columns that conforms to the tidy data principle.
+## Part A
+Because the height of the plants is measured in separate columns, I want to pivot height.0,	height.7,	height.14, and height.21 to all be in one days column. Then also translate the respective values for height at each of those time periods. Instead of having days represented as characters, I alsow want to convert days to an integer.
 
-b. Implement your proposed arrangement from part (a).
+## Part B
 ```{r}
-plants = plants %>% pivot_longer(c(`height.0`, `height.7`, `height.14`, `height.21`), names_to = "height") %>%  separate(height, into = c("century", "Days"), sep = 7)  
+plants = plants %>% pivot_longer(c(`height.0`, `height.7`, `height.14`, `height.21`), names_to = "height") %>%  separate(height, into = c("height", "days"), sep = 7)  
 
-plants = select(plants, -century)
+plants = select(plants, -height)
 
-plants$Days = as.integer(plants$Days)
+plants$days = as.integer(plants$days)
 ```
 
-c. Using the data set from (b), create a version of Figure 1, showing the growth of the plants over time according to different treatments.
+## Part C
 ```{r}
 ggplot(plants) + 
-  geom_line(aes(x = Days, y = value, col = plantid)) +
+  geom_line(aes(x = days, y = value, col = plantid)) +
   facet_wrap(. ~ treatment, ncol = 2) +
   labs(
     x = "Days",
@@ -54,39 +51,42 @@ ggplot(plants) +
   )
 ```
 
-
-### (2) California Wildfires
+# (2) California Wildfires
 
 In this problem, we will interactively visualize a [dataset](https://uwmadison.box.com/shared/static/k5vvekf1bhh9e16qb9s66owygc70t7dm.csv) giving statistics of recent California wildfires. The steps below guide you through the process of building this visualization. Make sure to include your code, a screen shot, and a brief explanation of what you did for each step.
 
 a. [Static version] Plot the day of the year that each fire started against the county within which it was located. Use the size of the mark to encode the number of acres burned in each fire. Sort the counties according to the average latitude of the fires within it. At this point, your figure should look something like Figure 2.
+```{r}
+fire = read.csv("fires@5.csv")
+```
+
+```{r}
+sort = fire %>% group_by(Counties) %>% summarise(lat = median(Latitude, na.rm = T))
+sor = fire %>% group_by(Counties) %>% summarise(lat = mean(Latitude, na.rm = T))
+```
+
+
 
 b. [Interactive] Provide a tooltip so that the name of the fire can be identified by hovering over the points. Introduce a slider to interactively highlight selected years. An interactive version is linked in the caption to Figure 2. _Hint_: The conditional encoding examples from [Week 3-1](https://observablehq.com/@krisrs1128/week-3-1) and the slider example from [Week 1 - 3](https://observablehq.com/@krisrs1128/introduction-to-vega-lite) may be useful references.
 
 c. What have you learned from this visualization? Is there additional information that is not described by this visualization or data set that you think would enrich your interpretation?
 
-### (3) Pokemon
-
-This problem gives practice in deriving new variables to improve a faceted plot. The data below give attack and defense statistics for Pokemon, along with their types. We will build a visualization to answer the question -- how do the different types of Pokemon vary in their attack and defense potential?
-
+# (3) Pokemon
 ```{r}
 pokemon = read_csv("https://uwmadison.box.com/shared/static/hf5cmx3ew3ch0v6t0c2x56838er1lt2c.csv")
 ```
 
-a. Derive a new column containing the attack-to-defense ratio, defined as
-$\frac{\text{Attack}}{\text{Defense}}$.
+## Part A
 ```{r}
 pokemon = pokemon %>% mutate(rate = Attack / Defense)
 ```
 
-
-b. For each `type_1` group of Pokemon, compute the median attack-to-defense ratio.
+## Part B
 ```{r}
 pokemon %>% group_by(type_1) %>% summarise(avg_rate = median(rate))
 ```
 
-
-c. Plot the attack vs. defense scores for each Pokemon, faceted by `type_1`. Use the result of (b) to ensure that the panels are sorted from types with highest to lowest attack-to-defense ratio. Your result should look similar to Figure 3.
+## Part C
 ```{r}
 type1_order <- pokemon %>%
   group_by(type_1) %>%
@@ -95,9 +95,7 @@ type1_order <- pokemon %>%
   pull(type_1)
 
 pokemon = pokemon %>% mutate(type_1 = factor(type_1, levels = type1_order))
-```
 
-```{r}
 ggplot(pokemon) + 
   geom_point(aes(x = Attack, y = Defense, col = Legendary)) +
   facet_wrap(. ~ type_1, ncol = 6) +
@@ -109,33 +107,137 @@ ggplot(pokemon) +
 
 d. Propose, but do not implement, a visualization of this data set that makes use of dynamic queries. What questions would the visualization answer? What would be the structure of interaction, and how would the display update when the user provides a cue?
 
-### (4) NYC Airbnb Data
+# (4) NYC Airbnb Data
 
-In this problem, we'll create a visualization to dynamically query a [dataset](https://uwmadison.box.com/shared/static/zi72ugnpku714rbqo2og9tv2yib5xped.csv) of Airbnb rentals in Manhattan in 2019. The steps below guide you through the process of building this visualization. Make sure to include your code, a screen shot, and a brief explanation of what you did for each step.
+````js
+airbnb = aq.fromCSV( await FileAttachment("airbnb.csv").text() )
+````
 
-a. Make a scatter plot of locations (Longitude vs. Latitude) for all the rentals,colored in by `room_type`.
+## Part A
+I based my code for this question off of the movie-ratings-over-time visualization from Week 3[2]. I knew in the later parts of the question I would need to add a histogram and I wanted my code for part a to be compatible with the other parts, so I started with a histogram and scatter plot. This was to ensure my syntax matched as I went through the various parts of this question. So I actually did part b first, then deleted the histogram so the graph would work for part a.
 
-b. Make a histogram of the log-prices^[We've applied a log-transform to the original rental prices because otherwise the prices are highly skewed.], with stacked colors to distinguish between room types. Vertically concatenate this histogram with the scatterplot from (a). An example of the resulting display is shown in Figure \ref{fig:nyc}.
+````js
+{
+  const location = vl.markCircle({size: 10})
+    .data(airbnb)
+    .encode(
+      vl.x().fieldQ('longitude').scale({domain: [-74.02,-73.9]}),
+      vl.y().fieldQ('latitude').scale({domain: [40.7,40.9]}),
+      vl.color().fieldN('room_type').scale({scheme: 'tableau20'})
+    )
+    .width(500)
+    .height(350);
+  return vl.vconcat(location).render();
+}
+````
+![Q4 Part A](C:\Users\bolzc\OneDrive\Documents\STAT479\HW2\Q4A.png)
 
-c. Introduce a selection so that brushing over price ranges highlights the associated rentals on the map. _Hint_: This is similar to the movie-ratings-over-time visualization from [Week 3[2]](https://observablehq.com/@krisrs1128/week-3-2).
+## Part B
+As stated in part a, I started with part b and based if off code from the movie-ratings-over-time visualization from Week 3[2]. I thought I had some big code error initially since it looked like only one point was displaying. After some research and looking at the example graph I found out that I needed to extremely zoom in on the graph, and then it would make sense. I additionally changed the colors for the scale on room type, so it would be easier to distinguish between them.
 
-d. Comment on the resulting visualization. If you had a friend who was interested in renting an Airbnb in NYC, what would you tell them?
+````js
+{
+  const brush = vl.selectInterval()
+    .encodings('x'); // limit selection to x-axis (year) values
+  const price = vl.markBar({width: 4})
+    .data(airbnb)
+    .select(brush)
+    .encode(
+      vl.x().fieldQ('log_price').title('Log Price'),
+      vl.y().count().title(null),
+      vl.color().fieldN('room_type')
+    )
+    .width(500)
+    .height(80);
+  const location = vl.markCircle({size: 10})
+    .data(airbnb)
+    .encode(
+      vl.x().fieldQ('longitude').scale({domain: [-74.02,-73.9]}),
+      vl.y().fieldQ('latitude').scale({domain: [40.7,40.9]}),
+      vl.color().fieldN('room_type').scale({scheme: 'tableau20'}),
+    )
+    .width(500)
+    .height(350);
+  return vl.vconcat(price, location).render();
+}
+````
+![Q4 Part B](C:\Users\bolzc\OneDrive\Documents\STAT479\HW2\Q4B.png)
 
-### (5) Imputing Housing Data
+## Part C
+Implementing part c was the easiest part of this question, since I only needed one more line of code. In the scatter plot I used vl.opacity() to add a brush that would highlight selected values at 75% opacity and have the rest of the values be 5% opacity.
+
+````js
+{
+  const brush = vl.selectInterval()
+    .encodings('x'); 
+  const price = vl.markBar({width: 4})
+    .data(airbnb)
+    .select(brush)
+    .encode(
+      vl.x().fieldQ('log_price').title('Log Price'),
+      vl.y().count().title(null),
+      vl.color().fieldN('room_type')
+    )
+    .width(500)
+    .height(80);  
+  const location = vl.markCircle({size: 10})
+    .data(airbnb)
+    .encode(
+      vl.x().fieldQ('longitude').scale({domain: [-74.02,-73.9]}),
+      vl.y().fieldQ('latitude').scale({domain: [40.7,40.9]}),
+      vl.color().fieldN('room_type').scale({scheme: 'tableau20'}),
+      vl.opacity().if(brush, vl.value(0.75)).value(0.05)
+    )  
+    .width(500)
+    .height(350);
+  return vl.vconcat(price, location).render();
+}
+````
+![Q4 Part C](C:\Users\bolzc\OneDrive\Documents\STAT479\HW2\Q4C.png)
+
+## Part D
+First off, I know New York has some very strict laws and regulations regarding Airbnb's and similar services, so I would encourage them to do plenty of research and refer them to this [link](https://www.airbnb.com/help/article/868/new-york-ny). I know that my friends prefer cheaper housing and if you want to be on the very low end of the log scale, you are going to have a shared room. There are three or four entire home/apt listings under a log price of 3.5. So if you do want a cheap entire home/apt, you should book early because there is a low supply. Additionally I wouldn't worry too much about location. There are plenty of Airbnbs at all price points around the cit. After all it's New York, if you want to go to a different part of the city than you are staying in, there is great public transit.
+
+
+# (5) Imputing Housing Data
 
 This problem gives practice visualizing missing-data imputation. We will use another housing-themed data set, this one describing homes for sale in Melbourne. Notice that the `BuildingArea` and `YearBuilt` variables have many missing values.
 
 ```{r}
-housing <- read_csv("https://uwmadison.box.com/shared/static/h5u176syp4xkret4w89n70efsp1tubex.csv")
+housing = read_csv("https://uwmadison.box.com/shared/static/h5u176syp4xkret4w89n70efsp1tubex.csv")
 ```
 
 a. Using `geom_miss_point`, make a plot of `Price` against `BuildingArea`, faceted by the region from which the home is located. Make sure the observations with missing `BuildingArea` values are still displayed somewhere on the plot, as in Figure 5. What does the plot suggest about how you might impute the `BuildingArea` column?
+```{r}
+ggplot(housing, aes(Price, BuildingArea)) + 
+  geom_miss_point() +
+  facet_wrap(. ~ Regionname, ncol = 2) +
+  labs(
+    y = "Building Area",
+    title = "Price v. Building Area by Region"
+  )
+```
+
 
 b. Using the `impute_lm` package, impute the `BuildingArea` variable. You may use whichever fully measured columns that you like -- using `BuildingArea ~Price` is a reasonable starting point.
+```{r}
+housing %>% filter(is.na(CouncilArea))
+new_DF <- housing[,colSums(is.na(housing)) > 0]
+```
+NA missing
+* Car -- 62
+* BuildingArea -- 6,450
+* YearBuilt -- 6,450
+* CouncilArea -- 1,369
+
+```{r}
+impute_lm(housing, BuildingArea ~ Price)
+```
 
 c. Recreate the visualization from part (a), but with the imputed data included. Make sure to distinguish between values that were truly measured and those that were imputed in part (b). Comment on the quality of the results. Do you notice anything unusual about the imputations in Northern Victoria?
 
-## Feedback
+# Feedback
 
 a. How much time did you spend on this homework?
+three hours so far
 b. Which problem did you find most valuable?
