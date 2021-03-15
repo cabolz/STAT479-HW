@@ -1,0 +1,124 @@
+---
+title: "STAT 479 HW3"
+output: rmarkdown::pdf_document
+header-includes:
+    - \usepackage {hyperref}
+    - \hypersetup {colorlinks = true, linkcolor = red, urlcolor = red}
+---
+
+```{r, echo = FALSE}
+library("knitr")
+opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
+```
+
+
+# (1) Matching Autocorrelation Functions
+The purpose of this problem is to build further intuition about auto-correlation. We'll simulate data with known structure and then see what happens to the associated autocorrelation functions.
+
+## Part A
+The code below simulates a sinusoidal pattern over the course of 2020. Extend
+the code so that `date` and `y` are contained in a tsibble object.
+
+```{r}
+date <- seq(from = as_date("2020-01-01"), to = as_date("2020-12-31"), by = 1)
+x <- seq(0, 12 * 2 * pi, length.out = length(date))
+y <- sin(x) + rnorm(length(x), 0, .4)
+```
+
+## Part B
+Using the tsibble object, calculate and visualize the induced autocorrelation function. Use a maximum lag of 50, and interpret the resulting plot.
+
+## Part C
+Write a function to simulate a version of the tsibble above, but with a linear trend from 0 to `z`, where `z` is an argument to the function.
+
+## Part D
+Using the function from (c), generate 5 datasets with linear trends of varying magnitudes. Plot the associated autocorrelation functions and comment on the relationship between the strength of the trend and the shape of the function.
+
+# (2) Spotify Time Series
+In this problem, we will study music streaming on Spotify in 2017. We'll start by looking at some characteristics of the most streamed song, and then will practice how to extract features from across the collection of most streamed songs.
+
+## Part A
+Let's look at the most streamed song of 2017, which was "Shape of You." The dataset [here](https://uwmadison.box.com/shared/static/hvplyr3jy6vbt7s80lqgfx81ai4hdl0q.csv) contains the number of streams for this song across regions, for each day in which it was in the Spotify 100 most streamed songs for that region. Create a `tsibble` object from this dataset, keying by `region` and indexing by `date`.
+
+## Part B
+Filter to `region == "global"`, and make a `gg_season` plot by month. Comment on the what you see.
+
+## Part C
+Provide a scatterplot showing the relationship between the number of streams of this song in the US and in Canada. Do the same between the US and Japan. Briefly comment. **Hint**: Use `pivot_wider` to spread the time series for each region across columns of a [reshaped](https://krisrs1128.github.io/stat479/posts/2021-01-27-week4-2/) dataset.
+
+## Part D
+The dataset [here](https://uwmadison.box.com/shared/static/xj4vupjbicw6c8tbhuynw0pll6yh1w0d.csv) contains similar data, but for all songs that appeared in the Spotify 100 for at least 200 days in 2017. We have filtered to only the global totals. Read these data into a tibble, keyed by `artist:region` and extract features of the `streams` time series using the `features` function in the feasts library. It is normal to see a few errors reported by this function, it just means that some of the statistics could not be calculated.
+
+## Part E
+Which tracks had the highest and lowest `trend_strength`'s? Visualize their streams over the course of the year.
+
+# (3) NYC Trees
+In this problem, we'll use vector data to enrich a visualization of trees in New York City. In the process, we'll practice reading in and generating summaries of geospatial data.
+
+## Part A
+The data at this [link](https://uwmadison.box.com/shared/static/t1mk6i4u5ks5bjxaw2c7soe2z8i75m2o.csv) include a subset of data from the New York City Tree Census. Make a scatterplot of the locations of all trees in the data, coloring in by tree species group and faceting by health.
+
+## Part B
+Suppose we wanted to relate these data to characteristics of the built environment. We have curated public data on [roads](https://uwmadison.box.com/shared/static/28y5003s1d0w9nqjnk9xme2n86xazuuj.geojson) and [buildings](https://uwmadison.box.com/shared/static/qfmrp9srsoq0a7oj0e7xmgu5spojr33e.geojson) within the same neighborhood. Read these data into `sf` objects using `read_sf`. For both datasets, report (i) the associated CRS and (ii) the geometry type (i.e., one of point, linestring, polygon, multipoint, multilinestring, multipolygon, geometry collection).
+
+## Part C
+Generate a version of the plot in (a) that has the roads and buildings in the background. An example result is given in Figure 1.
+
+# (4) Himalayan Glaciers
+In this problem, we'll apply the reading's discussion of raster data to understand a [dataset](https://uwmadison.box.com/shared/static/2z3apyg4t7ct5qd4mcwh9rpr63t02jql.tif) containing Landsat 7 satellite imagery of a Himalayan glacier system.
+
+## Part A
+Read the data into a `brick` object. What is the spatial extent of the file (that is, within what geographic coordinates do we have data)? How many layers of sensor measurements are available?
+
+## Part B
+Generate an RGB image of this area. In Landsat 7, the first three layers (B1, B2, and B3) provide the red, green, and blue channels.
+
+## Part C
+Make a plot of the slopes associated with each pixel within this region. An example result is shown in Figure 2.
+
+# (5) CalFresh Enrollment
+In this problem, we will investigate spatial and temporal aspects of enrollment in CalFresh, a nutritional assistance program in California.
+
+## Part A
+The code below reads in the CalFresh data. We've filtered out February 2019, since benefits were distributed differently in this month, leading to outliers for most counties. Extract features of the `calfresh` time series using the `features` function in the feasts library.
+
+```{r}
+calfresh <- read_csv("https://uwmadison.box.com/shared/static/rduej9hsc4w3mdethxnx9ccv752f22yr.csv") %>%
+  filter(date != "2019 Feb") %>%
+  mutate(date = yearmonth(date)) %>%
+  as_tsibble(key = county, index = date)
+```
+
+## Part B
+Visualize CalFresh enrollment over time for the counties with the highest and lowest `seasonal_strength_year`.
+
+## Part C
+The code below reads in a vector dataset demarcating the county boundaries in California. Join in the features dataset from (a) with this these vector data. Use this to produce a map with each county shaded in by its `seasonal_strength_year`. An example result is shown in Figure 3.
+
+```{r}
+counties <- read_sf("https://uwmadison.box.com/shared/static/gropucqxgqm82yhq13do1ws9k16dnxq7.geojson")
+```
+
+## Part D
+Propose, but do not implement, a visualization of this dataset that makes use of dynamic queries. What questions would the visualization answer? What would be the structure of interaction, and how would the display update when the user provides a cue?
+
+# (6) Political Book Recommendations
+In this problem, we'll study a network dataset of Amazon bestselling US Politics books. Books are linked by an edge if they appeared together in the recommendations ("customers who bought this book also bought these other books").
+
+## Part A
+The code below reads in the edges and nodes associated with the network. The edges dataset only contains IDs of co-recommended books, while the nodes data includes attributes associated with each book. Use the edges dataset to create an igraph graph object, and use the `ggnetwork` function to construct a data.frame summarizing the layout of the network. Use a `layout_with_fr` layout, as in the reading.
+
+```{r}
+edges <- read_csv("https://uwmadison.box.com/shared/static/54i59bfc5jhymnn3hsw8fyolujesalut.csv")
+nodes <- read_csv("https://uwmadison.box.com/shared/static/u2x392i79jycubo5rhzryxjsvd1jjrdy.csv", col_types = "ccc")
+```
+
+## Part B
+The output from (a) does not include any attributes about the books, since this is only available in the `nodes` dataset, and we built the graph layout using only `edges`. Join in the node attribute data. **Hint**: Use `left_join`, but using the `by` argument to ensure that `name` in the output of `ggnetwork` and `Id` in the original `nodes` dataset are associated with one another.
+
+## Part C
+Use the result from part (b) to visualize the network using. Include the book's title in the node label, and shade in the node according to political ideology. An example result is shown in Figure 4.
+
+# Feedback
+a. How much time did you spend on this homework?
+b. Which problem did you find most valuable?

@@ -1,0 +1,11 @@
+---
+title: "Milestone 2"
+author: "Caitlin Bolz"
+date: "3/7/2021"
+output: html_document
+---
+
+```{r}
+biodiv = read.csv("Biodiversity_by_County_-_Distribution_of_Animals__Plants_and_Natural_Communities.csv")
+```
+

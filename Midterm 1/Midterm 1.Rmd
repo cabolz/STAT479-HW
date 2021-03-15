@@ -1,0 +1,73 @@
+---
+title: "Midterm 1"
+author: "Caitlin Bolz"
+date: "3/5/2021"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+
+# Question 6
+
+```{r}
+murder = read.csv("https://uwmadison.box.com/shared/static/h4gau9heqy3uue9rmpq9b55s3kw37zd8.csv") # original
+murder_rate = murder1 %>%  
+  group_by(region) %>%
+  summarise(murders = sum(total),
+            population = sum(population),
+            murder_rate = mean(murders/population))
+```
+
+
+# Question 7
+```{r}
+anitbiotic_wide = read.csv("https://uwmadison.box.com/shared/static/bq4afq9kl2zn9qlb89q2rxhrrv73iuil.csv")
+antibiotic_tidy = anit_wide %>% 
+  pivot_longer(c(`Unc05qi6`, `Unc06af7`, `Unc06bhm`, `Unc06g1h`, `Unc06grq`, `Unc09fy6`), names_to = "species") %>% 
+  separate(sample, into = c("ind", "time"), sep =1, remove = F)
+```
+
+
+# Question 8
+
+```{r}
+bike = read.csv("https://uwmadison.box.com/shared/static/f16jmkkskylfl1hnd5rpslzduja929g2.csv")
+
+bike %>% group_by(dteday) %>% 
+ggplot(aes(hr, count, group = dteday)) + 
+  geom_line(size = .5, color = "darkgray") +
+  facet_wrap(~weekday) + 
+  labs(
+    x = "Hour",
+    y = "Demand"
+  )
+```
+
+# Question 10
+
+```{r}
+summary = bike %>% 
+  group_by(yr, weekday,hr) %>% 
+  mutate(min_b = quantile(count, .25), max_p = quantile(count, .75))
+```
+
+# Question 11
+
+```{r}
+summary %>% group_by(yr, dteday) %>% 
+ggplot(aes(x = hr, y = count, ymin = min_b, ymax = max_p, group =dteday, fill = yr), alpha = .5) +
+  geom_line(size = .5, color = "darkgray") + 
+  geom_ribbon() +
+  facet_wrap(~weekday) + 
+  labs(
+    x = "Hour",
+    y = "Demand",
+    fill = "Year"
+  )
+```
