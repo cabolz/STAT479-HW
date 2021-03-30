@@ -1,9 +1,6 @@
 ---
-title: "STAT 479 HW3"
+title: "STAT 479 HW3 Solutions"
 output: rmarkdown::pdf_document
-header-includes:
-    - \usepackage {hyperref}
-    - \hypersetup {colorlinks = true, linkcolor = red, urlcolor = red}
 ---
 
 ```{r, echo = FALSE}
@@ -11,6 +8,23 @@ library("knitr")
 opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
 ```
 
+```{r message=FALSE}
+library("RStoolbox")
+library("dplyr")
+library("feasts")
+library("ggnetwork")
+library("ggplot2")
+library("gridExtra")
+library("igraph")
+library("purrr")
+library("raster")
+library("readr")
+library("sf")
+library("tidyr")
+library("tsibble")
+library(lubridate)
+theme_set(theme_minimal())
+```
 
 # (1) Matching Autocorrelation Functions
 The purpose of this problem is to build further intuition about auto-correlation. We'll simulate data with known structure and then see what happens to the associated autocorrelation functions.
@@ -25,44 +39,189 @@ x <- seq(0, 12 * 2 * pi, length.out = length(date))
 y <- sin(x) + rnorm(length(x), 0, .4)
 ```
 
+We create this with a `tsibble` call, setting the index to `date`.
+```{r}
+x_df <- tsibble(date = date, x = x, y = y, index = date)
+```
+
 ## Part B
 Using the tsibble object, calculate and visualize the induced autocorrelation function. Use a maximum lag of 50, and interpret the resulting plot.
+
+We use the `ACF` function to compute an autocorrelation on the defined tsibble.
+
+```{r, fig.height = 2.3, fig.width = 3.8, fig.cap = "The ACF of the data from part 1(a)."}
+autoplot(ACF(x_df, y, lag_max = 50))
+```
 
 ## Part C
 Write a function to simulate a version of the tsibble above, but with a linear trend from 0 to `z`, where `z` is an argument to the function.
 
+The function below returns a tsibble with an increasing trend to $z$.
+```{r}
+simulate_series <- function(z) {
+  date <- seq(from = as_date("2020-01-01"), to = as_date("2020-12-31"), by = 1)
+  x <- seq(0, 12 * 2 * pi, length.out = length(date))
+  y <- sin(x) + seq(0, z, length.out = length(x)) + rnorm(length(x), 0, .4)
+  tsibble(date = date, x = x, y = y, index = date)
+}
+```
+
 ## Part D
 Using the function from (c), generate 5 datasets with linear trends of varying magnitudes. Plot the associated autocorrelation functions and comment on the relationship between the strength of the trend and the shape of the function.
+
+We can use the `map` function from `purrr` to loop over different trend strengths.
+
+```{r, fig.width = 12, fig.height = 2.5, fig.cap = "The ACF of series as they evolve from being more seasonal to more trend-like."}
+p <- map(seq(1, 10, length.out = 5), simulate_series) %>%
+  map(~ autoplot(ACF(., y, lag_max = 100)))
+grid.arrange(grobs = p, ncol = 3)
+```
+
+The ACF of a time series can be thought of as its signature. As we interpolate between periodic and linear trend structure, the ACF changes to reflect it.
 
 # (2) Spotify Time Series
 In this problem, we will study music streaming on Spotify in 2017. We'll start by looking at some characteristics of the most streamed song, and then will practice how to extract features from across the collection of most streamed songs.
 
 ## Part A
-Let's look at the most streamed song of 2017, which was "Shape of You." The dataset [here](https://uwmadison.box.com/shared/static/hvplyr3jy6vbt7s80lqgfx81ai4hdl0q.csv) contains the number of streams for this song across regions, for each day in which it was in the Spotify 100 most streamed songs for that region. Create a `tsibble` object from this dataset, keying by `region` and indexing by `date`.
+Create a `tsibble` object from this dataset, keying by `region` and indexing by `date`
+
+We can use `as_tsibble` to convert a data.frame into a `tsibble` object, using the required key and index argument.
+
+```{r}
+shape <- read_csv("https://uwmadison.box.com/shared/static/hvplyr3jy6vbt7s80lqgfx81ai4hdl0q.csv") %>%
+  as_tsibble(key = region, index = date)
+```
 
 ## Part B
 Filter to `region == "global"`, and make a `gg_season` plot by month. Comment on the what you see.
 
+The code below makes the required `gg_season` plot.
+
+* Each week, there is a slight uptick in streams on Friday and Saturday.
+* The number of streams gradually declines until late 2017, when it seems to
+  stablize.
+
+```{r, fig.height = 2.5, fig.width = 6, fig.cap = "A season plot of the number of streams of 'Shape of You'. After each month, the line wraps back to the left."}
+cols <- scales::viridis_pal()(10)
+shape %>%
+  filter(region == "global") %>%
+  gg_season(streams, period = "month", pal = cols)
+```
+
 ## Part C
 Provide a scatterplot showing the relationship between the number of streams of this song in the US and in Canada. Do the same between the US and Japan. Briefly comment. **Hint**: Use `pivot_wider` to spread the time series for each region across columns of a [reshaped](https://krisrs1128.github.io/stat479/posts/2021-01-27-week4-2/) dataset.
 
+* Canada and the US have strongly correlated streaming trends.
+* Japan and the US have a nonlinear, inverse relationship.
+* The song appears to have become more popular in Japan later in the year, after its popularity had already declined in the US. (This observation is not needed for credit on the problem).
+
+```{r, fig.width = 8, fig.height = 3, fig.cap = "The relationship between streams in the US, Canada, and Japan."}
+shape_wider <- shape %>%
+  as_tibble() %>%
+  pivot_wider(names_from = "region", values_from = "streams")
+
+p1 <- ggplot(shape_wider) +
+  geom_point(aes(x = us, y = ca, col = date))
+p2 <- ggplot(shape_wider) +
+  geom_point(aes(x = us, y = jp, col = date))
+grid.arrange(p1, p2, ncol = 2)
+```
+
 ## Part D
-The dataset [here](https://uwmadison.box.com/shared/static/xj4vupjbicw6c8tbhuynw0pll6yh1w0d.csv) contains similar data, but for all songs that appeared in the Spotify 100 for at least 200 days in 2017. We have filtered to only the global totals. Read these data into a tibble, keyed by `artist:region` and extract features of the `streams` time series using the `features` function in the feasts library. It is normal to see a few errors reported by this function, it just means that some of the statistics could not be calculated.
+Read these data into a tibble, keyed by `artist:region` and extract features of the `streams` time series using the `features` function in the feasts library. It is normal to see a few errors reported by this function, it just means that some of the statistics could not be calculated.
+
+The block below reads the full dataset and extracts features.
+
+```{r}
+spotify <- read_csv("https://uwmadison.box.com/shared/static/xj4vupjbicw6c8tbhuynw0pll6yh1w0d.csv") %>%
+  as_tsibble(key = artist:region, index = date)
+
+spotify_features <-  spotify %>%
+  features(streams, feature_set(pkgs = "feasts"))
+```
 
 ## Part E
 Which tracks had the highest and lowest `trend_strength`'s? Visualize their streams over the course of the year.
 
+* Sorry had the strongest `trend_strength`, with a strong decreasing trend over the course of the year.
+* Lose Yourself had the weakest `trend_strength`. This seems to make sense, since the song was released more than a decade ago -- it's streams reflect a  self-sustaining audience.
+
+```{r, fig.width = 9, fig.height = 3.5, fig.cap = "The tracks with the largest and smallest trend_strengths."}
+sorted_linearity <- spotify_features %>%
+  arrange(trend_strength) %>%
+  pull(track_name)
+
+track_plot <- function(df, filter_track) {
+  ggplot(df %>% filter(track_name == filter_track)) +
+    geom_line(aes(x = date, y = streams)) +
+    ggtitle(filter_track)
+}
+
+p1 <- track_plot(spotify, sorted_linearity[1])
+p2 <- track_plot(spotify, tail(sorted_linearity, 1))
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
 # (3) NYC Trees
-In this problem, we'll use vector data to enrich a visualization of trees in New York City. In the process, we'll practice reading in and generating summaries of geospatial data.
 
 ## Part A
-The data at this [link](https://uwmadison.box.com/shared/static/t1mk6i4u5ks5bjxaw2c7soe2z8i75m2o.csv) include a subset of data from the New York City Tree Census. Make a scatterplot of the locations of all trees in the data, coloring in by tree species group and faceting by health.
+The plot of tree locations can be made without referencing any spatial data visualization ideas. It is a scatterplot where the `x` and `y` coordinates come from longitude and latitude.
+
+```{r, fig.cap = "The tree locations, without any vector data background.", fig.height = 3.4}
+trees <- read_csv("https://uwmadison.box.com/shared/static/t1mk6i4u5ks5bjxaw2c7soe2z8i75m2o.csv")
+ggplot(trees) +
+  geom_point(
+    aes(y = latitude, x = longitude, col = species_group),
+    size = 0.07
+  ) +
+  facet_grid(. ~ health) +
+  labs(col = "Species") +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))) +
+  scale_color_brewer(palette = "Set3") +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
 
 ## Part B
-Suppose we wanted to relate these data to characteristics of the built environment. We have curated public data on [roads](https://uwmadison.box.com/shared/static/28y5003s1d0w9nqjnk9xme2n86xazuuj.geojson) and [buildings](https://uwmadison.box.com/shared/static/qfmrp9srsoq0a7oj0e7xmgu5spojr33e.geojson) within the same neighborhood. Read these data into `sf` objects using `read_sf`. For both datasets, report (i) the associated CRS and (ii) the geometry type (i.e., one of point, linestring, polygon, multipoint, multilinestring, multipolygon, geometry collection).
+
+### Roads
+(i) Geodetic CRS: WGS 84
+(ii) MULTILINESTRING
+
+### Buildings
+(i) Geodetic CRS: WGS 84
+(ii) MULTIPOLYGON
+```{r}
+streets <- read_sf("https://uwmadison.box.com/shared/static/28y5003s1d0w9nqjnk9xme2n86xazuuj.geojson")
+buildings <- read_sf("https://uwmadison.box.com/shared/static/qfmrp9srsoq0a7oj0e7xmgu5spojr33e.geojson")
+head(streets, 1)
+head(buildings, 1)
+```
 
 ## Part C
 Generate a version of the plot in (a) that has the roads and buildings in the background. An example result is given in Figure 1.
+
+We can use the same code as (a), but adding two `geom_sf` calls in the background, before the layer for trees is added.
+
+```{r, fig.cap = "Trees from the NYC tree census, overlaid on vector data of roads and building boundaries."}
+ggplot() +
+  geom_sf(data = buildings, col = "#d3d3d3", lwd = 0.2) +
+  geom_sf(data =  streets, col = "#7b7b7b", lwd = 0.1) +
+  geom_point(
+    data = trees,
+    aes(y = latitude, x = longitude, col = species_group),
+    size = 0.07
+  ) +
+  facet_grid(. ~ health) +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))) +
+  scale_color_brewer(palette = "Set3") +
+  labs(col = "Species") +
+  theme(legend.position = "bottom")
+```
 
 # (4) Himalayan Glaciers
 In this problem, we'll apply the reading's discussion of raster data to understand a [dataset](https://uwmadison.box.com/shared/static/2z3apyg4t7ct5qd4mcwh9rpr63t02jql.tif) containing Landsat 7 satellite imagery of a Himalayan glacier system.
@@ -70,11 +229,46 @@ In this problem, we'll apply the reading's discussion of raster data to understa
 ## Part A
 Read the data into a `brick` object. What is the spatial extent of the file (that is, within what geographic coordinates do we have data)? How many layers of sensor measurements are available?
 
+By printing out the object, we can see that the spatial extent is 86.51314, 87.00732, 27.63608, 28.11212. The first two coordinates give the bounds for longitude, the second two bound latitude.
+
+```{r}
+# change path to whereever you downloaded the object
+glaciers <- brick("~/Downloads/glaciers-small.tif")
+glaciers
+```
+
 ## Part B
 Generate an RGB image of this area. In Landsat 7, the first three layers (B1, B2, and B3) provide the red, green, and blue channels.
 
+```{r, fig.cap = "An RGB image of the glaciers region.", fig.width = 3}
+ggRGB(glaciers) +
+  scale_x_continuous(expand = c(0, 0)) + # trim the image
+  scale_y_continuous(expand = c(0, 0))
+```
+
 ## Part C
 Make a plot of the slopes associated with each pixel within this region. An example result is shown in Figure 2.
+
+We first check which channel contains the slope information.
+
+```{r}
+names(glaciers)
+```
+
+We see that channel 15 contains the information to visualize, and so extract that layer for visualization using `geom_raster`.
+
+```{r, fig.width = 3, fig.cap = "Slope information across the Himalayan glacier data for Problem 3."}
+glaciers_df <- as.data.frame(subset(glaciers, 15), xy=TRUE)
+ggplot(glaciers_df) +
+  geom_raster(aes(x = x, y = y, fill = slope)) +
+  scico::scale_fill_scico(palette = "batlow") +
+  coord_fixed() +
+  guides(fill = guide_legend(keyheight = 0.3)) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(legend.position = "bottom")
+```
 
 # (5) CalFresh Enrollment
 In this problem, we will investigate spatial and temporal aspects of enrollment in CalFresh, a nutritional assistance program in California.
@@ -82,43 +276,145 @@ In this problem, we will investigate spatial and temporal aspects of enrollment 
 ## Part A
 The code below reads in the CalFresh data. We've filtered out February 2019, since benefits were distributed differently in this month, leading to outliers for most counties. Extract features of the `calfresh` time series using the `features` function in the feasts library.
 
+The three arguments to the `features` function are,
+* The tsibble dataset containing the patterns to extract
+* The name of the column with time series values
+* The types of features to extract from the object.
+
 ```{r}
 calfresh <- read_csv("https://uwmadison.box.com/shared/static/rduej9hsc4w3mdethxnx9ccv752f22yr.csv") %>%
   filter(date != "2019 Feb") %>%
   mutate(date = yearmonth(date)) %>%
   as_tsibble(key = county, index = date)
+
+calfresh_features <- calfresh %>%
+  features(calfresh, feature_set(pkgs = "feasts"))
 ```
 
 ## Part B
 Visualize CalFresh enrollment over time for the counties with the highest and lowest `seasonal_strength_year`.
 
+We first order the counties according to `seasonal_strength_year` using `arrange`. Then, we show the two series using a line plot, using a wrapper function to avoid having to write the same ggplot code twice.
+
+```{r, fig.width = 9, fig.height = 3, fig.cap = "The counties with the highest and lowest `seasonal_strength_year` values."}
+season_order <- calfresh_features %>%
+  arrange(seasonal_strength_year) %>%
+  pull(county)
+
+plot_calfresh <- function(df, filter_county) {
+  ggplot(calfresh %>% filter(county == filter_county)) +
+    geom_line(aes(x = date, y = calfresh)) +
+    ggtitle(filter_county)
+}
+
+p1 <- plot_calfresh(calfresh, tail(season_order, 1))
+p2 <- plot_calfresh(calfresh, season_order[1])
+grid.arrange(p1, p2, ncol = 2)
+```
+
 ## Part C
 The code below reads in a vector dataset demarcating the county boundaries in California. Join in the features dataset from (a) with this these vector data. Use this to produce a map with each county shaded in by its `seasonal_strength_year`. An example result is shown in Figure 3.
 
-```{r}
+* We first join the features into the county data. This is what allows the map to access the underlying feature values.
+* We can then visualize the county boundaries using `geom_sf`.
+* `lwd = 0` reduces the line width.
+
+```{r, echo = TRUE, fig.width = 2.7, fig.cap = "California counties shaded in by seasonality strength in CalFresh enrollment."}
 counties <- read_sf("https://uwmadison.box.com/shared/static/gropucqxgqm82yhq13do1ws9k16dnxq7.geojson")
+calfresh_features <- counties %>%
+  left_join(calfresh_features)
+
+ggplot(calfresh_features) +
+  geom_sf(aes(fill = seasonal_strength_year), lwd = 0) +
+  scico::scale_fill_scico(palette = "lajolla") +
+  labs(fill = "Seasonality") +
+  theme(legend.position = "bottom")
 ```
 
 ## Part D
 Propose, but do not implement, a visualization of this dataset that makes use of dynamic queries. What questions would the visualization answer? What would be the structure of interaction, and how would the display update when the user provides a cue?
 
+* We could imagine coordinated views between the county time series and the map.
+  Selecting a set of counties would highlight the associated time series, and
+  brushing over a set of time series would highlight the associated map
+  elements.
+* Alternatively, the average values of the counties could update depending on the window of selected times.
+* Scented widgets based on time series features could be developed. For example,
+  histograms for seasonal or trend strengths could be brushed to highlight the
+  counties with time series falling within those ranges.
+  
 # (6) Political Book Recommendations
 In this problem, we'll study a network dataset of Amazon bestselling US Politics books. Books are linked by an edge if they appeared together in the recommendations ("customers who bought this book also bought these other books").
 
 ## Part A
 The code below reads in the edges and nodes associated with the network. The edges dataset only contains IDs of co-recommended books, while the nodes data includes attributes associated with each book. Use the edges dataset to create an igraph graph object, and use the `ggnetwork` function to construct a data.frame summarizing the layout of the network. Use a `layout_with_fr` layout, as in the reading.
 
+We can use the `ggnetwork` function to compute the layout information.
 ```{r}
 edges <- read_csv("https://uwmadison.box.com/shared/static/54i59bfc5jhymnn3hsw8fyolujesalut.csv")
 nodes <- read_csv("https://uwmadison.box.com/shared/static/u2x392i79jycubo5rhzryxjsvd1jjrdy.csv", col_types = "ccc")
+G <- graph_from_data_frame(edges[, c("Source", "Target")], directed = FALSE)
+node_data <- ggnetwork(G, layout = layout_with_fr(G))
 ```
 
 ## Part B
 The output from (a) does not include any attributes about the books, since this is only available in the `nodes` dataset, and we built the graph layout using only `edges`. Join in the node attribute data. **Hint**: Use `left_join`, but using the `by` argument to ensure that `name` in the output of `ggnetwork` and `Id` in the original `nodes` dataset are associated with one another.
 
+We left join the original node attributes into the new layout.
+
+```{r}
+node_data <- node_data %>%
+  left_join(nodes, by = c("name" = "Id"))
+```
+
 ## Part C
 Use the result from part (b) to visualize the network using. Include the book's title in the node label, and shade in the node according to political ideology. An example result is shown in Figure 4.
+
+Now that the layout is available, `geom_edges` and `geom_nodelabel` can be used to construct the graph.
+
+It is also acceptable to construct the graph using `ggraph`, in which case the layouts above are implicitly determined by the `tbl_graph` object and the `layout` argument in `ggraph`.
+
+```{r, fig.cap = "Amazon US Politics bestsellers, arranged according to the associated book recommendation network.", fig.width = 9.5, fig.height = 5}
+theme_set(theme_void())
+ggplot(node_data, aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(size = 0.5, col = "#adadad") +
+  geom_nodelabel(
+    aes(label = Label, fill = political_ideology),
+    size = 2.5
+  ) +
+  scale_fill_manual(values = c("#fcc7b4", "#d4f2fd", "#f7e2fe")) +
+  guides(fill = guide_legend(override.aes = list(label = ""))) +
+  labs(fill = "Ideology") +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+```
+
 
 # Feedback
 a. How much time did you spend on this homework?
 b. Which problem did you find most valuable?
+
+
+```{r}
+s1 = (63.75+68.25+62.25+67.25)
+s2 =(64.75+67.5+64.75+66.5)
+s3 =(68.5+64.25+64.5+66)
+s4 =(65.25+64.75+67.5)
+
+num = (12+1+5+8+4+13+9+15+3+20)
+
+```
+
+```{r}
+hi = 12/(15*16)
+a = ((261.5-30)^2)/4
+b = ((263.5-30)^2)/4
+c = ((263.25-30)^2)/4
+d = ((197.5-30)^2)/3
+h = (hi)*(a+b+c+d)
+
+```
+
