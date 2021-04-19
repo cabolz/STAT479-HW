@@ -14,105 +14,278 @@ library(dplyr)
 library(MASS)
 library(tibble)
 library(purrr)
+library(tidyr)
+library(superheat)
+library(tidymodels)
+library(cluster)
+library(topicmodels)
+library(forcats)
+library(ggrepel)
+library(stringr)
+library(embed)
 ```
 
 # (1) Polio incidence
-In this problem, we will use a heatmap to visualize a large collection of time series. The data, prepared by the [Tycho Project](https://www.tycho.pitt.edu/), contain weekly counts of new polio cases in the United States, starting as early as 1912.
 ```{r message=FALSE}
-polio <- read_csv("https://uwmadison.box.com/shared/static/nm7yku4y9q7ylvz5kbxya3ouj2njd0x6.csv")
+polio = read_csv("https://uwmadison.box.com/shared/static/nm7yku4y9q7ylvz5kbxya3ouj2njd0x6.csv")
 ```
 
 ## Part A
-Pivot the raw dataset so that states appear along rows and weeks appear along columns. Fill weeks that don't have any cases with 0's.
+```{r}
+polio_pivot = pivot_wider(
+  polio, 
+  names_from = period_start_date, 
+  values_from = cases)
+
+polio_pivot[is.na(polio_pivot)] = 0
+
+polio_pivot = polio_pivot %>% 
+  column_to_rownames(var = "state")
+```
 
 ## Part B
-Use the `superheat` package to make a heatmap of the data from (a). Have the color of each tile represent `log(1 + cases)`, rather than the raw counts. Reorder the states using a hierarchical clustering by setting `pretty.order.rows= TRUE`.
+```{r fig.height=18, fig.width=18, warning=FALSE, fig.cap = "Q1, Part B", fig.align = "center"}
+polio_pivot_log = log(1 + polio_pivot)
+cols = c('#f6eff7','#bdc9e1','#67a9cf','#1c9099','#016c59')
+superheat(
+  polio_pivot_log,
+  pretty.order.rows = T,
+  left.label.text.size = 7,
+  heat.pal = cols,
+  heat.lim = c(0,5)
+)
+```
+
 
 ## Part C
-Supplement the view from part (b) with a barchart showing the US total incidence during every given week. Interpret the resulting visualization. *Hint: use the `yt` argument of superheat.*
+Based on the figure 2 below, it appears that the peak amount of new polio cases occurred during the middle of this time period from 1916 to 1922. 
+```{r fig.height=22, fig.width=18, message=FALSE, warning=FALSE, fig.cap = "Q1, Part C", fig.align = "center"}
+cols = c('#f6eff7','#bdc9e1','#67a9cf','#1c9099','#016c59')
+superheat(
+  polio_pivot_log,
+  pretty.order.rows = T,
+  left.label.text.size = 5,
+  heat.pal = cols,
+  heat.lim = c(0,5),
+  yt = colSums(polio_pivot),
+  yt.plot.type = "bar",
+  yt.bar.col = "black",
+  yt.axis.name = ""
+)
+```
 
 ## Part D
-Describe types of annotation would improve the informativeness of the plot made in part (c). Also, describe one advantage and one disadvantage of visualizing a collection of time series as a heatmap, instead of as a collection of line plots.
+* Labeling the x-axis would be useful, because the viewer could see the points in time that this heatmap corresponds to. Also a description of what the 2000 and 4000 for the bar graph means. Additionally, a description of what the 1 to 5 scale at the bottom represents.
+* A disadvantage of visualizing a time series as a heatmap is that it is difficult to tell the different in magnitude for each state at a given point in time. If there is a dark teal square for two states, we are only able to say that they both had high values of new cases. We aren't able to easily say which one was higher than the other.
+* An advantage of visualizing a time series as a heatmap is that it is easier to compare relative trends over all 52 values on a heatmap, compared to trying to compare 52 line plots to each other.
 
 # (2) Silhouette statistics simulation
-This problem uses simulation to build intuition about silhouette statistics. The function below simulates a mixture of three Gaussians, with means evenly spaced out between `(start, 0)` and `(end, 0)`. See Figure 2 for an example simulated dataset. We will investigate what happens to the silhouette statistics for each point as the three clusters are made to gradually overlap.
-
-```{r, fig.width = 6, fig.height = 2, fig.cap = "An example simulated dataset from problem 2." }
-mixture_data <- function(start = 0, end = 10, K = 3, n = 100) {
-  mu <- cbind(seq(start, end, length.out = K), 0)
+```{r}
+mixture_data = function(start = 0, end = 10, K = 3, n = 100) {
+  mu = cbind(seq(start, end, length.out = K), 0)
   map_dfr(1:K, ~ mvrnorm(n, mu[., ], diag(2)) %>% as_tibble())
 }
+```
 
-ggplot(mixture_data()) +
-  geom_point(aes(x = V1, y = V2)) +
-  coord_fixed() +
-  labs(x = "x", y = "y") +
-  theme(
-    panel.background = element_rect(fill = "#f7f7f7"),
-    panel.border = element_rect(fill = NA, color = "#0c0c0c", size = 0.6),
-    panel.grid.minor = element_blank()
+## Part A
+```{r warning=FALSE}
+dataset10 = mixture_data()
+dataset8 = mixture_data(end = 8)
+dataset6 = mixture_data(end = 6)
+dataset4 = mixture_data(end = 4)
+dataset2 = mixture_data(end = 2)
+dataset0 = mixture_data(end = 0)
+```
+
+## Part B
+```{r}
+gaussian_kmeans = function(dataset, K){
+  x = dataset %>% 
+    scale()
+  
+  kmeans(x, center = K) %>% 
+    augment(dataset) %>% 
+    mutate(silhouette = silhouette(as.integer(.cluster), dist(x))[, "sil_width"])
+}
+
+kmeans10 = gaussian_kmeans(dataset10, K = 3)
+kmeans8 = gaussian_kmeans(dataset8, K = 3)
+kmeans6 = gaussian_kmeans(dataset6, K = 3)
+kmeans4 = gaussian_kmeans(dataset4, K = 3)
+kmeans2 = gaussian_kmeans(dataset2, K = 3)
+kmeans0 = gaussian_kmeans(dataset0, K = 3)
+
+kmeans10$id = 10
+kmeans8$id = 8
+kmeans6$id = 6
+kmeans4$id = 4
+kmeans2$id = 2
+kmeans0$id = 0
+
+kmeans_dataset = rbind(kmeans0, kmeans2, kmeans4, kmeans6, kmeans8, kmeans10)
+```
+
+## Part C
+As you decrease the end value, the range of x for the corresponding graph is also decreased. Additionally, with an end value of 10, you have three seperate distinct groups. As you decrease the end value, the data becomes less clustered and there is not as distinctly seperate groups.
+```{r, fig.cap = "Q2, Part C", fig.align = "center"}
+ggplot(kmeans_dataset, aes(x = V1, y = V2, col = silhouette)) + 
+  geom_point() +
+  facet_wrap(~ id, ncol = 3) +
+  xlab("x") +
+  ylab("y") +
+  theme(legend.position = "bottom")
+```
+
+
+# (3) Taxi trips
+```{r message=FALSE, warning=FALSE}
+trips_long = 
+  read_csv("https://uwmadison.box.com/shared/static/098cjaetm8vy0mufq21mc8i9nue2rr2b.csv", 
+           col_types = cols(TRIP_ID = col_character()))
+trips_wide = 
+  read_csv("https://uwmadison.box.com/shared/static/cv0lij4d9gn3s8m2k98t2ue34oz6sbj5.csv", 
+           col_types = cols(TRIP_ID = col_character()))
+```
+
+## Part A
+```{r, fig.cap = "Q3 Part A", fig.align="center"}
+trips_long %>% 
+  filter(TRIP_ID == "1389986517620000047") %>% 
+  ggplot(aes(x=x, y=y)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    x = "Longitude",
+    y = "Latitude"
   )
 ```
 
-## Part A
-Simulate versions of these data where the `end` argument is decreased from 10 to 0.
-
 ## Part B
-Write a function that performs $K$-means and computes the silhouette statistic given any one of the datasets generated in part (a). Use this function to compute the silhouette statistics for each point in the simulated datasets.
+If we look at the `wide` format dataset we can interpret latitude, longitude, and trip id through clustering. In comparison, the `long` format dataset has trip id, call type, taxi id, timestamp, day type, trajectory element, latitude, longitude, n rows, date, day of week, year, month, and hour. We are able to examine the same data in `long` as we are in `wide`, but just with more depth. We can choose to cluster by something else than trip id.
 
 ## Part C
-Visualize the silhouette statistics from part (b) overlaid onto the simulated data. Discuss the results.
+```{r}
+dist = trips_wide %>% 
+  column_to_rownames(var = "TRIP_ID") %>% 
+  dist()
 
-# (3) Taxi trips
-In this problem, we will use hierarchical clustering to find typical taxi trip trajectories in Porto, Portugal. The data are a subset from the the [ECML / PKDD 2015 Challenge](http://www.geolink.pt/ecmlpkdd2015-challenge/dataset.html) -- the link provides a complete data dictionary. We have pre-processed it into two formats. The first wide includes each taxi trip on its own row, with latitude and longitude coordinates along the journey given as separate columns (`x_0, y_0` is the origin of the trip and `x_15`, `y_15` is the destination). The second long format spreads each point of the journey into a separate row.
-```{r message=FALSE, warning=FALSE}
-trips_wide <- read_csv("https://uwmadison.box.com/shared/static/cv0lij4d9gn3s8m2k98t2ue34oz6sbj5.csv")
-trips_long <- read_csv("https://uwmadison.box.com/shared/static/098cjaetm8vy0mufq21mc8i9nue2rr2b.csv")
+hclust = hclust(dist)
 ```
 
-## Part A
-Filter the `long` form of the data down to trip `1389986517620000047` and plot its trajectory as a sequence of points.
-
-## Part B
-We could hierarchically cluster rows in either the `wide` or the `long` format datasets. How would the interpretation of the results differ between the two approaches?
-
-## Part C
-Compute a hierarchical clustering of the `wide` format data, using only the columns starting with `x` or `y` as features.
-
 ## Part D
-Cut the hierarchical clustering tree so that 8 clusters are produced. Visualize the trajectories of the taxi trips either colored or faceted by their cluster.
+```{r fig.align="center", fig.cap="Q3 Part D", fig.height=6, fig.width=6}
+clusters = cutree(hclust, k = 8) %>% 
+  tibble(TRIP_ID = names(.), cluster = as.factor(.))
+
+trips_long %>% 
+  left_join(clusters, by = "TRIP_ID") %>% 
+  ggplot(aes(x = x, y=y, col = cluster))+
+  geom_jitter(alpha = 0.1, size = 0.1) +
+  theme_bw()+
+  theme(
+    panel.background = element_rect(fill = "#f7f7f7"),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  ) +
+  scale_color_brewer(palette = "Set2") +
+  coord_fixed()+
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))) +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    color = "Cluster"
+  )
+```
+
 
 # (4) Food nutrients
-This problem will use PCA to provide a low-dimensional view of a 14-dimensional nutritional facts dataset. The data were originally curated by the USDA and are regularly used in [visualization studies](http://bl.ocks.org/syntagmatic/raw/3150059/).
 ```{r message=FALSE}
-nutrients <- read_csv("https://uwmadison.box.com/shared/static/nmgouzobq5367aex45pnbzgkhm7sur63.csv")
+nutrients = 
+  read_csv("https://uwmadison.box.com/shared/static/nmgouzobq5367aex45pnbzgkhm7sur63.csv")
 ```
 
 ## Part A
-Define a tidymodels `recipe` that normalizes all nutrient features and specifies that PCA should be performed.
+```{r}
+pca_rep = recipe(~., data = nutrients) %>% 
+  update_role(name, id, starts_with("group"), new_role = "id") %>% 
+  step_normalize(all_predictors()) %>% 
+  step_pca(all_predictors()) 
+
+pca_prep = prep(pca_rep)
+
+# don't need yet
+components = tidy(pca_prep, 2)
+scores = juice(pca_prep)
+variances = tidy(pca_prep, 2, type = "variance")
+```
 
 ## Part B
-Visualize the top 6 principal components. What types of food do you expect to have low or high values for PC1 or PC2?
+I expect foods with lots of water to have low values of PC1 and foods with high calories to have high values of PC1. I expect foods with high values of carbohydrates to have to have low values of PC2. 
+```{r, fig.cap = "Q4 Part B", fig.align = "center"}
+components_new = components %>%
+  filter(component %in% str_c("PC", 1:6)) %>%
+  mutate(terms = reorder_within(terms, abs(value), component))
+
+ggplot(components_new, aes(value, terms)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ component, scales = "free_y") +
+  scale_y_reordered() +
+  labs(y = NULL) +
+  theme(axis.text = element_text(size = 7), strip.text = element_text(size = 8))
+```
+
+Provided answer
+```{r}
+pca_result <- tidy(pca_prep, 2) %>% 
+  mutate(terms = str_replace(terms, " \\(g\\)", ""))
+ggplot(pca_result %>% filter(component %in% str_c("PC", 1:6))) +
+  geom_col(aes(x = value, y = terms)) + 
+  facet_wrap(~ component) + 
+  labs(x = "Component", y = "Features")
+```
 
 ## Part C
-Compute the average value of PC2 within each category of the `group` column. Give the names of the groups sorted by this average.
+```{r}
+group_order = scores %>% 
+  group_by(group) %>% 
+  summarise(mean = mean(PC2)) %>% 
+  arrange(desc(mean)) %>% 
+  pull(group)
+
+group_order
+
+scores = scores %>% mutate(group = factor(group,  levels = group_order))
+```
+
+Provided answer
+```{r}
+pca_scores <- juice(pca_prep) 
+
+group_order <- pca_scores %>% 
+  group_by(group) %>% 
+  summarise(mpc2 = mean(PC2)) %>% 
+  arrange(mpc2) %>% 
+  pull(group)
+```
 
 ## Part D
-Visualize the scores of each food item with respect to the first two principal components. Facet the visualization according to the `group` column, and sort the facets according to the results of part (c). How does the result compare with your guess from part (b)?
+The results confirmed some of my guesses from part b. Specifically looking at baked products which is a high carbohydrate food, we can see they have low values of PC2. Fats and oils are very high in calories, and as predicted they have in general, large values of PC1. Fruit and fruit juices are composed primarily of water, and they are shown to have relatively low values of PC1.
+```{r fig.height=10, fig.width=10, fig.cap = "Q4 Part B", fig.align = "center"}
+variances_filtered = variances %>%  filter(terms == "percent variance")
+
+ggplot(scores, aes(PC1, PC2, label = name)) +
+  geom_point(alpha = 0.7, size = 1.5) +
+  coord_fixed(sqrt(variances_filtered$value[2] / variances_filtered$value[1])) +
+  facet_wrap(~ group, nrow = 5) + 
+  theme(axis.text = element_text(size = 7), strip.text = element_text(size = 8)) +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 0)
+```
+
 
 # (5) Modeling topics in _Pride and Prejudice_
-This problem uses LDA to analyze the full text of _Pride and Prejudice_. 
-The code below creates two R objects, `paragraph` and `dtm`. 
-`paragraph` is a data.frame whose rows are paragraphs from the book. We've filtered very short paragraphs; e.g., from dialogue.
-`dtm` is a `DocumentTermMatrix` containing word counts across the same paragraphs -- the $i^{th}$ row of `dtm` corresponds to the $i^{th}$ row of `paragraph`.
-
-```{r eval=FALSE, include=FALSE}
-data("stop_words")
-paragraphs <- tibble(book = prideprejudice) %>%
-  unnest_tokens(text, book, token = "paragraphs") %>%
-  filter(nchar(text) > 200) %>%
-  mutate(paragraph = row_number()) 
-  
+```{r message=FALSE}
+paragraphs <- read_csv("https://uwmadison.box.com/shared/static/pz1lz301ufhbedzsj9iioee77r95xz4v.csv") 
 dtm <- paragraphs %>%
   unnest_tokens(word, text) %>%
   filter(!word %in% stop_words$word) %>%
@@ -121,26 +294,78 @@ dtm <- paragraphs %>%
 ```
 
 ## Part A
-Fit an LDA model to `dtm` using 6 topics. Set the seed by using the argument `control = list(seed = 479)` to remove any randomness in the result.
+```{r}
+dtm_LDA = LDA(dtm, k = 6, control = list(seed = 479))
+dtm_LDA
+
+dtm_topics = tidy(dtm_LDA, matrix = "beta")
+dtm_memberships = tidy(dtm_LDA, matrix = "gamma")
+
+dtm_topics %>% 
+  arrange(topic, -beta)
+dtm_memberships %>% 
+  arrange(document, topic)
+```
 
 ## Part B
-Visualize the top 30 words within each of the fitted topics. Specifically, create a faceted bar chart where the heights of the bars correspond to word probabilities and the facets correspond to topics. Reorder the bars so that each topic's top words are displayed in order of decreasing probability.
+```{r, fig.cap = "Q5 Part B", fig.align = "center"}
+top_terms = dtm_topics %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 30) %>% 
+  mutate(term = reorder_within(term, -beta, topic))
+
+ggplot(top_terms, aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free_x") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_reordered() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme(axis.text = element_text(size = 5)) +
+  labs(
+    x = "Term",
+    y = "Beta"
+  )
+```
 
 ## Part C
-Find the paragraph that is the purest representative of Topic 2. That is, if $\gamma_{ik}$ denotes the weight of topic $k$ in paragraph $i$, then print out paragraph $i^{\ast}$ where $i^{\ast} = \arg \max_{i}\gamma_{i2}$. Verify that the at least a few of the words with high probability for this topic appear. Only copy the first sentence into your solution.
+The last code chunk in this section gives the paragraph. I have confirmed that many of the words with high beta values for this topic appear in this paragraph. The first sentence of this paragraph is as follows:
+* sir william and lady lucas were speedily applied to for their consent; and it was bestowed with a most joyful alacrity.
+```{r}
+member_filter = dtm_topics %>% 
+  filter(topic == 2)
+
+dtm_memberships %>% 
+  filter(topic == 2) %>% 
+  filter(gamma == max(gamma)) %>% 
+  arrange(document, topic, gamma)
+
+purest_para = paragraphs %>% 
+  filter(paragraph == 347) %>% 
+  arrange(paragraph, text)
+```
 
 # (6) Single-Cell Genomics
-In this problem, we will apply UMAP to a dataset of Peripheral Blood Mononuclear Cells (PBMC) released by 10X Genomics. The first column, `cell_tag`, gives an identifier for each cell in the dataset. All other columns are molecules that were detected in that cell. For example, CD74 is a molecule often found on the surface of T-cells.
 ```{r message=FALSE}
-pbmc <- read_csv("https://uwmadison.box.com/shared/static/ai539s30rjsw5ke4vxbjrxjaiihq7edk.csv")
+pbmc = read_csv("https://uwmadison.box.com/shared/static/ai539s30rjsw5ke4vxbjrxjaiihq7edk.csv")
 ```
 
 ## Part A
-Define a tidymodels `recipe` that specifies that UMAP should be performed with the parameters `learn_rate = 0.1` and `neighbors = 5`. There is no need to normalize these data, as they have been normalized in advance using methods tailored to single-cell genomics data.
+```{r}
+umap_recipe = recipe(~., data = pbmc) %>% 
+  update_role(cell_tag, GNLY, new_role = "id") %>% 
+  step_umap(all_predictors(), neighbors = 5, learn_rate = 0.1)
+umap_prep = prep(umap_recipe)
+scores = juice(umap_prep)
+```
 
 ## Part B
-Compute the UMAP embeddings across cells. Color points in by their value of the GNLY molecule.
+```{r, fig.cap = "Q6 Part B", fig.align = "center"}
+ggplot(scores, aes(umap_1, umap_2)) +
+  geom_point(aes(color = GNLY)) +
+  scale_color_viridis_c()   
+```
+
 
 # Feedback
-a. How much time did you spend on this homework?
-b. Which problem did you find most valuable?
+a. I spent around 15 hours on this homework.
+b. I found question 5 about _Pride and Prejudice_ to be most valuable.

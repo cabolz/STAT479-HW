@@ -1,0 +1,24 @@
+---
+title: "Week 13 Notes"
+output: html_document
+---
+
+# Overview
+*	Introduction to Feature Learning
+*	Visualizing Learned Features
+*	Collections of Features
+* Optimizing Feature Maps 
+
+# Introduction to Feature Learning
+
+***
+
+# Visualizing Learned Features
+
+***
+
+# Collections of Features
+
+***
+
+# Optimizing Feature Maps 

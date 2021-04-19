@@ -1,0 +1,237 @@
+---
+title: "Midterm 2"
+author: "Caitlin Bolz"
+date: "4/16/2021"
+output: html_document
+---
+
+Put Library's here
+```{r}
+library(readr)
+library(D3TableFilter)
+```
+
+# Instructions
+* This midterm includes questions related to material from Weeks 1 through 11, and it tests both conceptual and hands-on knowledge
+* Your submission is due within 8 hours of your opening the exam or before 12:00am CST April 17, whichever comes first
+* For multiple choice and True / False questions, you must enter your solution into Canvas
+* For hands-on problems, you must copy code into the text boxes and upload figures as indicated. Make sure not to omit any code you have used at any point
+* We have the following expectations,
+  * You may use any textbook, class, or online resources
+  * You may not consult other individuals about any problem
+
+# Question 1 3pts
+Select all the true statements about network visualization.
+* For large, dense networks, node-link diagrams are preferable to adjacency matrix visualizations. -- NO
+* For tasks related to local topology, node-link diagrams are preferable to adjacency matrix visualizations -- YES
+* It is possible to visually encode edge weight in either node-link or adjacency matrix visualizations. -- YES 
+* It is possible to visually encode node category in either node-link or adjacency matrix visualizations. -- YES
+
+# Questin 2 3pts
+# Question 3 4pts
+This is vector data
+We have some multilinestring, linestring, point
+
+Select all the true statements about the dataset
+NO * It is a vector dataset and includes multipolygon geometries.
+NO * It is a raster dataset, and can be read in using `brick()`
+YES * It is a vector dataset, and can be visualized using `geom_sf` in ggplot2.
+NO * It is a raster dataset, and can be visualized using plotRGB in RStoolbox.
+YES * Its CRS is WGS 84 (equivalently, EPSG4326).
+
+```{r}
+dataset = read_sf("https://uwmadison.box.com/shared/static/jt7k8e55rngsofo2pk7gmpry3wrqr0ct.geojson")
+dataset %>% dplyr::select(id, name, geometry)
+head(dataset)
+
+class(dataset)
+attr(dataset, "sf_column")
+print(dataset[9:14], n = 3)
+nc_geom = st_geometry(dataset)
+nc_geom[[70]]
+class(nc_geom)
+```
+
+
+
+# Questions 4-7
+* This problem utilizes response data from a survey of UW–Madison students and faculty
+* The survey assessed respondents’ support for the use of non-human animals in scientific research
+* Questions were categorized into various groups
+* The heatmap below shows each respondent’s average response by question type
+* Higher-valued responses indicate more support for the use of non-human animals in scientific research
+
+## Question 4 2pts
+The definition of “strong support” is not given. However, it is most reasonable to assume that “strong” supporters primarily include respondents in clusters:
+YES -- 1 and 2
+1 and 3
+1 and 4
+3 and 4
+None of the above
+Not enough information given
+ 
+## Question 5 1pt
+There appears to be a weak relationship between support for non-human animal research across question types.
+* True
+* False
+ 
+## Question 6 2pts
+Cluster 3 contains the fewest respondents. One plausible interpretation of this fact is:
+no * There are relatively few respondents with consistently high levels of support for non-human animal research across categories.
+no * There are relatively few respondents with consistently low levels of support for non-human animal research across categories.
+no * This is meaningless. It is simply a result of the number of clusters chosen. If a different number of clusters were chosen, the respondents in cluster 3 would be spread out among many clusters.
+yes * This is meaningless. It is simply a result of the way the algorithm randomly chooses initial cluster centers. Running the clustering algorithm again will result in cluster 3 respondents being spread out among many clusters.
+* None of the above.
+ 
+## Question 7 1pt
+On average, there is less support for the use of pain or distress in non-human animal research than the use of different species.
+yes * True
+* False
+
+
+# Questions 8 - 10
+```{r message=FALSE}
+before = read_csv("before.csv")
+step1 = read_csv("step1.csv")
+step2 = read_csv("step2.csv")
+final = read_csv("final.csv")
+```
+
+## Question 8 4pts
+```{r}
+my_step1 = before
+my_step1$attribute[is.na(my_step1$attribute)] = "SPELL/TRAP"
+```
+
+```{r}
+att1 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Continuous" & type == "Spell Card") %>% 
+  mutate(type = "Continuous Spell")
+
+att2 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Continuous" & type == "Trap Card") %>% 
+  mutate(type = "Continuous Trap")
+
+att3 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Quick-Play") %>% 
+  mutate(type = "Quick-Play Spell")
+
+att4 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Equip") %>% 
+  mutate(type = "Equip Spell")
+
+att5 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Normal" & type == "Spell Card") %>% 
+  mutate(type = "Normal Spell")
+
+att6 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Normal" & type == "Trap Card") %>% 
+  mutate(type = "Normal Trap")
+
+att7 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Field") %>% 
+  mutate(type = "Field Spell")
+
+att8 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Ritual") %>% 
+  mutate(type = "Ritual Spell")
+
+att9 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Counter") %>% 
+  mutate(type = "Counter Trap")
+```
+
+```{r message=FALSE}
+comb1 = full_join(att1, att2)
+comb2 = full_join(att3, att4)
+comb3 = full_join(att5, att6)
+
+comb4 = full_join(att7, att8)
+comb5 = full_join(comb4, att9)
+
+comb6 = full_join(comb1, comb2)
+comb7 = full_join(comb3, comb5)
+comb8 = full_join(comb6, comb7)
+```
+
+```{r}
+my_step1 = my_step1[my_step1$type != "Spell Card" & my_step1$type != "Trap Card", ]
+```
+
+
+```{r}
+combined = full_join(my_step1, comb8)
+```
+
+## Question 9 4pts
+```{r message=FALSE}
+my_step2 = step1 %>% group_by(attribute, type) %>% 
+  summarize(n = n(),
+            tcg = mean(!is.na(ban_tcg)),
+            ocg = mean(!is.na(ban_ocg)))
+```
+
+## Question 10 3pts
+need spell/trap cards at the top
+```{r}
+my_final = my_step2 %>% pivot_longer(c(`tcg`, `ocg`), names_to = "name", values_to = "prop_restricted")
+```
+
+# Questions 11 - 15
+```{r message=FALSE}
+library(readr)
+library(dplyr)
+library("tsibble")
+pbs <- read_csv("https://uwmadison.box.com/shared/static/fcy9q1uleqru7gcs287q903y0rcnw2a2.csv") %>%
+  mutate(Month = as.Date(Month))
+```
+
+## Question 11 2pts
+```{r}
+pbs = as_tsibble(pbs, index = Month, key = c("ATC2_desc"))
+```
+
+## Question 12 3pts
+```{r}
+library(feasts)
+library(ggplot2)
+pbs %>% 
+  filter(ATC2_desc == "D" |
+         ATC2_desc == "ANTIPSORIATICS" |
+         ATC2_desc == "IMMUNE SERA AND IMMUNOGLOBULINS" |
+         ATC2_desc == "ALLERGENS" |
+         ATC2_desc == "IMMUNOSUPPRESSIVE AGENTS") %>% 
+  autoplot(Scripts)
+```
+
+## Question 13 3pts
+```{r}
+pbs_features = pbs %>%
+  features(Scripts, feature_set(pkgs = "feasts"))
+
+pbs_new = subset(pbs_features, select = c("ATC2_desc", "trend_strength", "seasonal_strength_week", "seasonal_peak_week", "seasonal_trough_week", "stl_e_acf1", "stl_e_acf10", "acf1", "acf10", "diff1_acf1", "diff1_acf10", "diff2_acf1", "diff2_acf10", "season_acf1", "pacf5", "diff1_pacf5", "diff2_pacf5", "season_pacf"))
+
+pca_recipe = recipe(~., data = pbs_new) %>% 
+  update_role(ATC2_desc, new_role = "id") %>% 
+  step_normalize(all_predictors()) %>% 
+  step_pca(all_predictors())
+
+pca_prepped = prep(pca_recipe)
+```
+
+## Question 14/15 3pts/2pts
+```{r}
+pca_result = tidy(pca_prepped, 2) %>% 
+  filter(component %in% str_c("PC", 1:2)) %>% 
+  group_by(component) %>% 
+  mutate(terms = reorder_within(terms, abs(value), component))
+
+ggplot(pca_result, aes(value, terms)) +
+  geom_col() +
+  facet_wrap(~ component, scales = "free_y") +
+  scale_y_reordered() +
+  labs(x = "Value", 
+       y = "Features",
+       title = "Top Two Principal Components")
+```
+

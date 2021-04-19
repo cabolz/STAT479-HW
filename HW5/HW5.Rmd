@@ -1,0 +1,156 @@
+---
+title: "STAT 479 HW5"
+author: "Caitlin Bolz"
+output: pdf_document
+header-includes:
+    - \usepackage {hyperref}
+    - \hypersetup {colorlinks = true, linkcolor = red, urlcolor = red}
+---
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, include=}
+library(knitr)
+library(caret)
+library(dplyr)
+library(keras)
+library(purrr)
+library(readr)
+library(rstanarm)
+library(tidybayes)
+```
+
+# (1) Political Blogs
+
+In this problem, we will use topic modeling to see how the topics discussed across the political blogsphere evolved over course of 2008. We have fitted a model to a subsample of [The CMU 2008 Political Blog Corpus](http://reports-archive.adm.cs.cmu.edu/anon/ml2010/CMU-ML-10-101.pdf), and the resulting topicmodels object is [here](https://uwmadison.box.com/shared/static/nen0mdsahjpa4d67g9choq5y481ws4mk.rda).
+
+## Part A
+Use the discrepancy formula described in [this lecture](https://krisrs1128.github.io/stat479/posts/2021-03-30-week11-3/) (and implemented at this [link](https://uwmadison.box.com/s/xetdmpkfvjutxf65n1arockuhcjeoddq)) to identify 50 words that can be used to discriminate between the fitted topics.
+
+## Part B
+Make a heatmap that displays the $\beta_{kw}$ probabilities of the words in part (b).
+
+## Part C
+Using the document [metadata file](https://uwmadison.box.com/shared/static/qg91329100k9ah11jvvkvbcy5dy7adnw.csv), design and implement a visualization that shows variation in the memberships $\gamma_{dk}$ either over time, across blogs, or in relation to political leaning. Suggest some interpretations for patterns that you see. An example result, showing change in $\gamma_{dk}$ at the weekly level is given in Figure 1, but you may submit alternatives.
+
+# (2) A Bikesharing Model
+In this and the next problem, we will visualize models fitted to predict bikesharing demand in a subset of the Capitol Bikesharing [dataset](https://uwmadison.box.com/shared/static/aa91qdqehagag8wg8mqsm4z5b4g2hu0x.csv). We will see what types of features are learned by different types of models, whether there are any interactions between features, and whether linear and nonlinear approaches are substantively different.
+
+## Part A
+The code below fits a gradient boosting machine (GBM) to predict bikesharing demand (count) using all features available, except day of the year. Visualize the Ceteris Paribus profiles for the temperature and humidity variables, and provide a brief interpretation.
+    
+```{r, echo = TRUE, include = TRUE}
+bike <- read_csv("https://uwmadison.box.com/shared/static/aa91qdqehagag8wg8mqsm4z5b4g2hu0x.csv")
+x <- select(bike, -count, -dteday)
+hyper <- data.frame(n.trees = 100, interaction.depth = 4, shrinkage = 0.1, n.minobsinnode = 10)
+fit <- train(x = x, y = bike$count, method = "gbm", tuneGrid = hyper, verbose = FALSE)
+```
+
+## Part B
+Has the GBM learned an interaction effect between the hour of day (`hr`) and weekend (`weekend`) features? Briefly justify your answer using a grouped CP plot.
+
+# (3) Contrastive Profiles for Bikesharing
+This problem continues the exploration in the previous one. Here, we study whether the choice of GBM was critical, or whether any other model would have learned the same relationship between the predictors and bikesharing demand. 
+
+## Part A
+The code below fits a lasso model to the same input and output dataset. Provide contrastive partial dependence profiles between the lasso and the GBM from above, focusing on the hour (`hr`), humidity (`hum`), and temperature (`temp`) features. Comment on the result.
+
+```{r, echo = TRUE, include = TRUE}
+hyper <- data.frame(lambda = 0.001, alpha = 0)
+fit_lm <- train(x = x, y = bike$count, method = "glmnet", tuneGrid = hyper)
+```
+
+## Part B
+Repeat part (a), but comparing the GBM with the CART model fitted below. Comment on the result.
+
+```{r, echo = TRUE, include = TRUE}
+hyper <- data.frame(cp = 0.01)
+fit_cart <- train(x = x, y = bike$count, method = "rpart", tuneGrid = hyper)
+```
+
+# (4) Representation analysis for CIFAR10
+This problem asks you to investigate the features learned by a deep learning model trained to the [CIFAR10 dataset](https://www.cs.toronto.edu/~kriz/cifar.html). We will study the structure of the dataset and develop some intuition for what representations different neurons are learning.
+
+## Part A
+The code below loads the CIFAR training dataset. Training images and labels can be accessed using `cifar$x` and `cifar$y`, respectively. Plot the first 15 examples from this dataset and print out their class labels. What does class 7 seem to correspond to?
+
+```{r, echo = TRUE, include = TRUE}
+cifar <- dataset_cifar10()$train
+```
+
+## Part B
+We have trained a small model to this dataset, available at this [link](https://uwmadison.box.com/shared/static/c9kkxyrjb9myfj5knj5vnx0j8gn1uh0s.h5). Extract and visualize the feature activations associated with the first five features in layer 1 (`conv2d_8`) for the first image in the dataset.
+
+```{r, echo = TRUE, include = TRUE}
+f <- tempfile()
+download.file("https://uwmadison.box.com/shared/static/c9kkxyrjb9myfj5knj5vnx0j8gn1uh0s.h5", f)
+model <- load_model_hdf5(f)
+```
+
+## Part C
+The block below extracts feature activations associated with layer 7, for the first 10% of the dataset. Specifically, the $ij^{th}$ element of `features` gives the activation of neuron $j$ (in layer 7) on image $i$. Visualize the 10 images that have the highest activation for neuron 1. What does this neuron seem to be responsive to?
+    
+```{r, echo = TRUE, include = TRUE}
+activation_model <- keras_model(inputs = model$input, outputs = model$layers[[7]]$output)
+features <- activation_model(cifar$x[1:5000,,, ]) %>%
+  as.matrix()
+```
+
+# (5) Household Radon Levels
+
+This problem analyzes a [dataset](https://uwmadison.box.com/shared/static/3yn994tc1ft73z3br4ys18uri700gvik.csv) of household radon levels in Minnesota. The data were gathered by the EPA in [an effort](https://pubmed.ncbi.nlm.nih.gov/8919076/) to understand which factors lead to increased exposure to this carcinogenic gas; e.g., it is known that radon levels are higher in basements than on the ground floor.
+
+A secondary goal of this problem is to illustrate the use of the `rstanarm` and `tidybayes` packages to extract prior and posterior predictive distributions. While these packages cannot be applied as generally as the methods discussed in lecture, they provide an elegant interface for specific types of Bayesian models. You will not need to write any code using these packages -- we only ask that you visualize their outputs.
+
+## Part A
+Design and implement a visualization that describes the variation in `log_radon` levels from county to county.
+
+```{r, echo = TRUE, include = TRUE}
+radon <- read_csv("https://uwmadison.box.com/shared/static/3yn994tc1ft73z3br4ys18uri700gvik.csv")
+```
+
+## Part B
+The code below simulates prior predictive data from two potential Bayesian models of `log_radon`. Both models have the form `log_radon ~ (1 | county) + floor`, which means each county - floor level combination gets its own mean. In the first model, a vague $\mathcal{N}\left(0, 1000\right)$ prior is used, while in the second, a somewhat more informative $\mathcal{N}\left(0, 10\right)$ is used instead.
+
+```{r, echo = TRUE, include = TRUE}
+priors <- list(
+  "vague" = stan_lmer(log_radon ~ (1 | county) + floor, prior = normal(0, 1000), data = radon, prior_PD = 1, refresh = 0),
+  "informative" = stan_lmer(log_radon ~ (1 | county) + floor, prior = normal(0, 10), data = radon, prior_PD = 1, refresh = 0)
+)
+```
+  
+The code below extracts 5 simulated datasets from the prior predictive. Each row is a simulated house; the simulation number is denoted by `.draw`. The index to the original dataset is given by `.row`. The simulated `log_radon` levels are given in the `.prediction` column. The `prior` column describes which type of prior was used for that simulation.
+
+```{r, echo = TRUE, include = TRUE}
+prior_preds <- map_dfr(priors, ~ add_predicted_draws(radon, .), .id = "prior") %>%
+  filter(.draw > 3995)
+
+head(prior_preds)
+```
+    
+Design and implement a visualization to compare the two types of priors. Which prior seems more plausible?
+    
+## Part C
+The code below draws posterior predictive samples from two new models, which either ignore or model variation from county to county (`lm` and `hierarchical` respectively). Both use information about whether the measurement came from a basement. Only the last 10 simulated runs are kept. Using these data, make boxplots of posterior predictive samples across counties, for each of the two models. An example figure is provided in Figure 2. What are the main differences between the two models? In what ways are the county level effects (as you studied in part (a)) accurately or inaccurately modeled?
+
+```{r, echo = TRUE, include = TRUE}
+posterior_preds <- list(
+  "lm" = stan_glm(log_radon ~ floor, prior = normal(0, 10), data = radon, chains = 1, refresh = 0),
+  "hierarchical" = stan_lmer(log_radon ~ (1 | county) + floor, prior = normal(0, 10), data = radon, chains = 1, refresh = 0)
+) %>%
+  map_dfr(~ add_predicted_draws(radon, .), .id = "model") %>%
+  filter(.draw > 990)
+```
+
+# (6) Reading Response
+
+This problem asks you to reflect on one of the three readings from week 14 ([a](https://www.datasketch.es/project/655-frustrations-doing-data-visualization), [b](https://simplystatistics.org/2019/04/17/tukey-design-thinking-and-better-questions/), [c](https://www.theatlantic.com/magazine/archive/1945/07/as-we-may-think/303881/)).
+
+Prepare a brief (1 paragraph) response. For example, you may discuss any of the following points,
+
+* Are there points from the reading that you strongly agree or disagree with?
+* Are there lessons from the reading that you think you might incorporate into your future projects or plans?
+* How would you explain the main ideas of the reading to a friend who is not technically trained in visualization?
+
+## Feedback
+
+a. How much time did you spend on this homework?
+b. Which problem did you find most valuable?

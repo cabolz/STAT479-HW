@@ -1,0 +1,14 @@
+base
+knitr
+dplyr
+ggplot2
+gutenbergr
+stringr
+tidyr
+tidytext
+topicmodels
+forcats
+ggrepel
+readr
+superheat
+tibble

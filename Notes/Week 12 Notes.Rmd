@@ -1,0 +1,606 @@
+---
+title: "Week 12 Notes"
+output: html_document
+---
+
+# Overview
+* Partial Dependence Profiles I
+* Partial Dependence Profiles II
+* Visualization for Model Building
+* Prior and Posterior Predictives
+* Pointwise Diagnostics 
+
+# Partial Dependence Profiles I
+An introduction to partial dependence profiles.
+
+```{r message=FALSE, warning=FALSE}
+library(knitr)
+library(DALEX)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(rstan)
+library(tidyr)
+library(purrr)
+library(dplyr)
+library(ggrepel)
+library(gbm)
+library(loo)
+theme479 <- theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "#f7f7f7"),
+    panel.border = element_rect(fill = NA, color = "#0c0c0c", size = 0.6),
+    legend.position = "bottom"
+  )
+theme_set(theme479)
+```
+
+* As more complex models become more common in practice, visualization has emerged as a key way for (a) summarizing their essential structure and (b) motivating further modeling refinements.
+* In modern machine learning, it's common to use a function $f$ to approximate the relationship between a $D$-dimensional input $\mathbf{x}$ and a univariate response $y$
+* We are given a sample of $n$ pairs $\left(\mathbf{x}_{i}, y_{i}\right)$ with which to learn this relationship, and we hope that the function we learn will generalize to future observations
+* Some further notation: 
+  * We will write $x_{j}$ for the $j^{th}$ coordinate of $\mathbf{x}$
+  * We will write $\mathbf{x}^{j\vert = z}$ to denote the observation $\mathbf{x}$ with the $j^{th}$ coordinate set to $z$
+
+```{r, fig.cap = "Illustration of the $\\mathbf{x}^{j \\vert = z}$ operation. The $j^{th}$ coordinate (1 in this case) for a selected observation is set equal to $z$.", echo = FALSE, out.width = 700}
+include_graphics("https://uwmadison.box.com/shared/static/l6u0y1l8ww6fikiihjin5ov60pc6qr8b.png")
+```
+
+* Linear models are simple enough that they don’t require any follow-up visual inspection
+  * Since they assume $f\left(\mathbf{x}\right) = \hat{\beta}^{T}\mathbf{x}$, they are completely described by the vector of coefficients $\hat{\beta}$
+  * We can exactly describe what happens to $f$ when we increase $x_{j}$ by one unit: we just increase the prediction by $\hat{\beta}_{j}$
+* More complex models — think random forests or neural networks — don’t have this property. 
+  * While these models often have superior performance, it’s hard to say how changes in particular input features will affect the prediction.
+* Partial dependence plots try to address this problem. They provide a description for how changing the $j^{th}$ input feature affects the predictions made by complex models
+* To motivate the definition, consider the toy example below. 
+  * The surface is the fitted function $f\left(\mathbf{x}\right)$, mapping a two dimensional input $\mathbf{x}$ to a real-valued response
+  * How would you summarize the relationship between $x_{1}$ and $y$? 
+  * The main problem is that the shape of the relationship depends on which value of $x_{2}$ we start at
+
+```{r, fig.cap = "An example of why it is difficult to summarize the relationship between an input variable and a fitted surface for nonlinear models.", echo = FALSE, out.width = 500}
+include_graphics("https://uwmadison.box.com/shared/static/moztt0q240waytarit786j4ry1xe93g6.png")
+```
+
+* One idea is to consider the values of $x_{2}$ that were observed in our dataset
+  * Then, we can evaluate our model over a range of values $x_{1}$ after fixing those values of $x_{2}$
+  * These curves are called Ceteris Paribus profiles. Ceteris Paribus means « All Else Held Equal »
+* The same principle holds in higher dimensions
+  * We can fix $D - 1$ coordinates of an observation and then evaluate what happens to a sample’s predictions when we vary coordinate $j$
+  * Mathematically, this is expressed by $h_{x}^{f,j}\left(z\right) := f\left(\mathbf{x}^{j\vert= z}\right)$.
+
+```{r, fig.cap = "Visual intuition behind the CP profile. Varying the $j^{th}$ coordinate for an observation traces out a curve in the prediction surface.", preview = TRUE, echo = FALSE, out.width = 700}
+include_graphics("https://uwmadison.box.com/shared/static/mpe45nor6xm4gt1idhedayw9ik754c2k.png")
+```
+
+* For example, let's consider how CP can be used to understand a model fitted to the Titanic dataset
+  * This is a dataset that was used to understand what characteristics survivors of the Titanic disaster had in common
+  * It's not obvious in advance which characteristics of passengers made them more likely to survive, so a model is fitted to predict survival
+
+```{r}
+data(titanic)
+titanic <- select(titanic, -country) %>%
+  na.omit()
+
+x <- select(titanic, -survived)
+hyper <- data.frame(n.trees = 100, interaction.depth = 8, shrinkage = 0.1, n.minobsinnode = 10)
+fit <- train(x = x, y = titanic$survived, method = "gbm", tuneGrid = hyper, verbose = F)
+```
+
+* Next, we can compute the CP profiles. 
+  * We are showing the relationship between age and survival, though any subset of variables could be requested
+  * The bold curve is a Partial Dependence (PD) profile, which we will discuss below
+  * Each of the other curves corresponds to a passenger, though only a subsample is shown
+  * The curves are obtained by fixing all the characteristics of the passanger except for age, and then seeing what happens to the prediction when the age variable is increased or decreased
+
+```{r eval=FALSE, fig.cap="CP and PDP profiles for age"}
+explanation <- explain(model = fit, data = x, y = titanic$survived)
+profile <- model_profile(explainer = explanation)
+plot(profile, geom = "profiles", variables = "age") +
+  theme479
+```
+
+* It seems that children had the highest probability of survival. Technically, these are all predicted probabilities from the model
+* The relationship is far from linear, with those between 40 and 60 all having about the same probabilities. 
+* Notice that the profiles are vertically offset from one passenger to another. This is because, aside from age, each passenger had characteristics that made them more or less likely to survive.
+* We used the DALEX package to produce these curves
+  * The `explain` function takes the fitted model and original dataset as input
+  * It returns an object with many kinds of model summaries
+  * To extract the CP profiles from these summaries, we use `model_profile`
+  * The output of this function has been designed so that calling `plot` with `geom = "profiles"` will show the CP profiles
+* The PD profile is computed by averaging across all the CP profiles. It is a more concise alternative to CP profiles, showing one curve per features, rather than one curve per sample.
+
+```{r eval=FALSE}
+plot(profile, geom = "aggregates") +
+  theme479
+```
+
+* Not only are the PD plots simpler to read than the full collection of CP profiles — by performing this aggregation step, subtle patterns may become more salient, for the same reason that an average carries more information than any subset of observations.
+
+```{r eval=FALSE}
+save(fit, file = "~/Desktop/fit.rda")
+```
+
+***
+
+# Partial Dependence Profiles II
+Discovering richer structure in partial dependence profiles. 
+
+* Partial dependence (PD) plots help answer the question, « How is feature $j$ used by my model $f$? » Slight variations on PD plots are useful for some related followup questions,
+  	* Has my model $f$ learned interactions between features $j$ and $j^{\prime}$?
+  	* How do the models $f$ and $f^{\prime}$ differ in the way that they use feature $j$?
+* The variants, called Grouped and Contrastive PD plots, reduce the original CP
+profiles less aggressively than PD plots, but without becoming overwhelmingly
+complicated.
+
+### Interactions
+* We say that there is an interaction between variables $j$ and $j^{\prime}$ if the relationship between $x_{j}$ and $y$ is modulated by variable $j^{\prime}$
+* For example, in the figure below, the slope of cross-sections across $j$ depends on $j^{\prime}$.
+* Using the language of CP profiles, the figure above means that the shape of the CP profile in $j$ depends on the particular setting of $j^{\prime}$. This motivates the use of Grouped PD profiles — we compute several PD profiles in $j$, restricting attention to CP profiles whose value $x_{j^{\prime}}$ lies within a prespecified range.
+* To illustrate, we revisit the CP profiles for age from the Titanic dataset
+  * Below, the profiles are grouped according to the class of the ticket holder
+  * The result shows that the relationship between age and survival was not the same across all passengers
+  * For all classes, there was a decrease in survival probability for adults, but the dropoff was most severe for crew members
+
+```{r, fig.cap = "Grouping the CP profiles by ticket class reveals an interaction effect with age in the Titanic dataset."}
+f <- tempfile()
+download.file("https://uwmadison.box.com/shared/static/nau695mppsoxx0f6bns1ieo7kh1bje0j.rda", f)
+fit <- get(load(f))
+
+data(titanic)
+titanic <- titanic %>%
+  select(-country) %>%
+  na.omit()
+x <- select(titanic, -survived)
+
+explanation <- explain(model = fit, data = x, y = titanic$survived)
+profiles <- model_profile(explainer = explanation, groups = "class")
+plot(profiles, geom = "profiles", variables = "age") +
+  scale_color_brewer(palette = "Set2") +
+  theme479
+```
+
+* What should we do if there are many input variables and we don’t have a prior knowledge about which variables $j^{\prime}$ might be interacting with $j$? One idea is to try to *discover* relevant interactions by clustering the original set of CP profiles.
+
+* In more detail, we can compute the CP profiles for all the samples, and then see whether there are subsets of profiles that all look similar
+* If we find features $j^{\prime}$ that characterize these groupings, then we have found features that interact with $j$ (with respect to the fitted model $f$)
+* The plot below shows the same profiles as above, but clustering directly. It seems to recover the interaction between age and class, even though we have not explicitly provided this grouping variable.
+
+```{r, fig.cap = "Discovered groupings in the CP profiles for age reveals an interaction effect."}
+profiles <- model_profile(explainer = explanation, variables = "age", k = 3)
+plot(profiles, geom = "profiles", variables = "age") +
+  scale_color_brewer(palette = "Set2") +
+  theme479
+```
+
+### Model Comparison
+* The comparison of different models’ PD profiles can be used to,
+  	* Validate a simple model
+  	* Guide the design of new features, and
+  	* Characterizing overfitting
+*	PD profiles that are used to compare different models are sometimes called « Contrastive » PD profiles.
+* To validate a simple model, we can compare its PD profiles with those of a more sophisticated model. We will illustrate this by fitting linear and random forest models to a dataset of apartment prices 
+  * It is a simulated dataset, but designed to reflect properties of a real dataset
+  * Given various properties of an apartment, the goal is to determine its price
+* The code below fits the two models and extracts their CP and PD profiles
+
+```{r}
+data(apartments)
+x <- select(apartments, -m2.price)
+profiles_lm <- train(x, apartments$m2.price, method = "lm") %>%
+  explain(x, apartments$m2.price, label = "LM") %>%
+  model_profile()
+profiles_rf <- train(x, apartments$m2.price, method = "rf", tuneGrid = data.frame(mtry = 10)) %>%
+  explain(x, apartments$m2.price, label = "RF") %>%
+  model_profile()
+```
+
+* The PD profile below shows that the random forest learns linear relationships with price for both the surface and floor variables
+* If all the effects were like this, then we would have a good reason for preferring the linear model
+
+```{r, fig.cap = "A contrastive PD display suggests that the floor and surface features are linearly related with apartment price."}
+plot(profiles_lm, profiles_rf, variables = c("surface", "floor")) +
+  scale_color_brewer(palette = "Set2") +
+  theme479
+```
+
+* When making the comparison between a simple and a complex model, certain discrepancies might become apparent
+* For example, important nonlinearities or interactions might be visible from the PD profiles of the complex model. This information can guide the design of new features in the simpler model, so that it can continue to be used
+* This is exactly the case in the apartments dataset above -- there is a strong nonlinear relationship for the construction year variables. This suggests that, if a linear model is still desired, then a new feature should be defined that identifies whether the apartment was built between 1935 and 1990.
+
+```{r, fig.cap = "The random forest learns a nonlinear relationship between construction year and apartment price. This suggests designing new features to include in the linear model."}
+plot(profiles_lm, profiles_rf, variables = "construction.year") +
+  scale_color_brewer(palette = "Set2") +
+  theme479
+```
+
+* Suppose you have found that a model is overfitting (e.g., by finding that it’s training error is much lower than its test error). 
+* One way to address this overfitting is to compare the PD profiles between the simple and complex models. If the profiles are very different for one of the features, then that feature may be the source of overfitting.
+
+***
+
+# Visualization for Model Building
+The relationship between exploratory analysis and model development.
+
+* Exploratory data analysis and model building complement each other well. In practical problems, visualization can guide us towards more plausible models.
+* We rarely know the exact form of a model in advance, but usually have a few reasonable candidates. Exploratory analysis can rule out some candidates and suggest new, previously unanticipated, relationships.
+* We will illustrate these ideas using an example
+  * A researcher is interested in monitoring the level of PM2.5, a type of small air particlute that can be bad for public health
+  * High quality data are available from weather stations scattered around the world, but their data only apply locally
+  * On the other hand, low quality data, available from satellites, are available everywhere
+  * A model is desired that uses the weather station measurements to calibrate the satellite data
+  * If it works well, it could be used to monitor PM2.5 levels at global scale.
+
+```{r}
+f <- tempfile()
+download.file("https://github.com/jgabry/bayes-vis-paper/blob/master/bayes-vis.RData?raw=true", f)
+GM <- get(load(f))
+GM@data <- GM@data %>% 
+  mutate(
+    log_pm25 = log(pm25), 
+    log_sat = log(sat_2014)
+  )
+```
+
+* The simplest model simply fits $\text{station} = a + b \times\text{satellite}$ at locations where they are both available
+* This model was used in practice by the Global Burden of Disease project until 2016
+
+```{r, fig.cap = "The relationship between satellite and ground station estimates of PM2.5."}
+ggplot(GM@data, aes(log_sat, log_pm25)) +
+  geom_point(aes(col = super_region_name), size = 0.8, alpha = 0.7) +
+  scale_color_brewer(palette = "Set2") +
+  labs(
+    x = "log(satellite)",
+    y = "log(ground station)",
+    col = "WHO Region"
+  ) +
+  coord_fixed()
+```
+
+* However, when we plot these two variables against one another, we notice that there is still quite a bit of heterogeneity. The residuals are large — what features might be correlated with these residuals, which if included, would improve the model fit?
+  * The error $\epsilon_{i}$ in a model $y_i = f\left(x_{i}\right) + \epsilon_{i}$ represents out our ignorance of the myriad of unmeasured factors that determine the relationship between $x$ and $y$.
+	* For example, desert sand is known to increase PM2.5, but it is not visible from space. The residuals are probably correlated with whether the model is in a desert area (we underpredict PM2.5 in deserts), and so would be improved if we included a term with this feature.
+* One hypothesis is that country region is an important factor
+  * Below, we fit regression lines separately for different country super-regions, as specified by the WHO 
+  * The fact that the slopes are not the same in each region means that we should modify our model to have a different slope in each region
+  * Viewed differently, this is like adding an interaction between the satellite
+measurements and WHO region
+
+```{r, fig.cap = "The relationship between these variables is not the same across regions."}
+ggplot(GM@data, aes(log_sat, log_pm25)) +
+  geom_point(aes(col = super_region_name), size = 0.4, alpha = 0.7) +
+  geom_smooth(aes(col = super_region_name), method = "lm", se = F, size = 2) +
+  scale_color_brewer(palette = "Set2") +
+  labs(
+    x = "log(satellite)",
+    y = "log(ground station)",
+    col = "WHO Region"
+  ) +
+  coord_fixed()
+```
+
+* The WHO categorizations are somewhat arbitrary
+* Maybe there are better country groupings, tailored specifically to the PM2.5 problem? 
+* One idea is to cluster the ground stations based on PM2.5 level and use these clusters as a different region grouping
+
+```{r, fig.cap = "We can define clusters of regions on our own, using a hierarchical clustering."}
+average <- GM@data %>% 
+  group_by(iso3) %>% 
+  summarise(pm25 = mean(pm25))
+
+clust <- dist(average) %>%
+  hclust() %>%
+  cutree(k = 6)
+
+GM@data$cluster_region <- map_chr(GM@data$iso3, ~ clust[which(average$iso3 == .)])
+ggplot(GM@data, aes(log_sat, log_pm25)) +
+  geom_point(aes(col = cluster_region), size = 0.4, alpha = 0.7) +
+  geom_smooth(aes(col = cluster_region), method = "lm", se = F, size = 2) +
+  scale_color_brewer(palette = "Set2") +
+  labs(
+    x = "log(satellite)",
+    y = "log(ground station)",
+    col = "Cluster Region"
+  ) +
+  coord_fixed()
+```
+
+* We now have a « network » of models
+* We’re going to want more refined tools for distinguishing between them
+* This is the subject of the next two lectures
+
+
+***
+ 
+# Prior and Posterior Predictives
+Simulating data to evaluate model quality.
+
+* From the previous notes, we see that an exploratory analysis can motivate few plausible models for a dataset. How should we go about choosing between them?
+
+```{r}
+f <- tempfile()
+download.file("https://uwmadison.box.com/shared/static/2pzgdu7gyobhl5tezo63tns7by1aiy6d.rda", f)
+GM <- get(load(f))
+```
+
+* In some of your other classes, you might have seen people use cross-validation / test set error
+  * While this is useful (and relatively automatic), it can  be a black box
+  * An alternative which often brings mores insight into the structure of the problem is to use prior and posterior predictive distributions for (visual) model comparison.
+
+### Prior predictive distributions
+* The prior predictive distribution can be used to decide whether certain model families are reasonable candidates for a problem, before formally incorporating the evidence coming from the data
+* The idea is that if we can write down a generative model, then we can simulate different datasets with it, even before estimating the model parameters. This is often the case in Bayesian models, where we can 
+  (a) sample parameters from the prior, and 
+  (b) simulate data from the model with those parameters.
+* If the simulated datasets are plausible, then the overall model class is a reasonable one. If they are not, then the model class should be modified. Either the prior or the likelihood might need revision.
+* For example, in the example below, we simulate datasets using both a vague and an informative prior. Vague priors are often recommended because they are « more objective » in some sense. However, in this case, we see that the simulated datasets are not even remotely plausible. 
+
+```{r}
+# function to simulate from vague prior
+prior1 <- function(Nsim) {
+  tau0 <- 1 / sqrt(rgamma(1, 1, rate = 100))
+  tau1 <- 1 / sqrt(rgamma(1, 1, rate = 100))
+  sigma <- 1 / sqrt(rgamma(1, 1, rate = 100))
+  beta0i <- rnorm(7, 0, tau0)
+  beta1i <- rnorm(7, 0, tau1)
+  beta0 <- rnorm(1, 0, 100)
+  beta1 <- rnorm(1, 0, 100)
+  
+  epsilon <- rnorm(Nsim, 0, sigma)
+  data.frame(
+    log_pm25 = GM$log_pm25,
+    region = GM$super_region_name,
+    sim = beta0 + beta0i[GM$super_region] + (beta1 + beta1i[GM$super_region]) * GM$log_sat + epsilon
+  )
+}
+```
+
+```{r, fig.cap = "Prior predictive samples from the vague prior are on a completely implausible scale."}
+prior1_data <- map_dfr(1:12, ~ prior1(Nsim = nrow(GM@data)), .id = "replicate")
+ggplot(prior1_data, aes(x = log_pm25, y = sim)) + 
+  geom_abline(slope = 1) +
+  geom_point(aes(col = region), alpha = 0.1, size = 0.4) +
+  scale_color_brewer(palette = "Set2") +
+  labs(x = "True station data", y = "Simulated station data") +
+  facet_wrap(~ replicate, scale = "free_y")
+```
+
+* The block below instead simulates from a subjective, informative prior
+* The resulting samples are much more plausible, lying in a comparable range to the true data
+* However, note, the samples from the prior predictive do not need to look exactly like the observed data — if they did, there would be no need to fit model parameters! 
+* Instead, they should look like plausible datasets that might have been observed.
+
+```{r, fig.cap = "Prior predictive samples from the weakly informative prior seem more plausible, though they do not (and should not) exactly fit the true data."}
+# function to simulate from informative prior
+prior2 <- function(Nsim) {
+  tau0 <- abs(rnorm(1, 0, 1))
+  tau1 <- abs(rnorm(1, 0, 1))
+  sigma <- abs(rnorm(1, 0, 1))
+  beta0i <- rnorm(7, 0, tau0)
+  beta1i <- rnorm(7, 0, tau1)
+  beta0 <- rnorm(1, 0, 1)
+  beta1 <- rnorm(1, 1, 1)
+  
+  epsilon <- rnorm(Nsim, 0, sigma)
+  data.frame(
+    log_pm25 = GM$log_pm25,
+    region = GM$super_region_name,
+    sim = beta0 + beta0i[GM$super_region] + (beta1 + beta1i[GM$super_region]) * GM$log_sat + epsilon
+  )
+}
+
+prior2_data <- map_dfr(1:12, ~ prior2(Nsim = nrow(GM@data)), .id = "replicate")
+ggplot(prior2_data, aes(x = log_pm25, y = sim)) + 
+  geom_abline(slope = 1) +
+  geom_point(aes(col = region), alpha = 0.1, size = 0.4) +
+  scale_color_brewer(palette = "Set2") +
+  labs(x = "True station data", y = "Simulated station data") +
+  facet_wrap(~ replicate, scale = "free_y")
+```
+
+* Philosophically, this prior predictive analysis is based on the idea that, though probability is subjective, evidence can be used to update our beliefs
+* The idea of the prior predictive is to visually encode subjective beliefs about the problem under study before gathering new evidence
+
+### Posterior predictive distributions
+* Once the prior predictive is calibrated, we can fit the model. To evaluate it’s quality, we can use the posterior predictive
+* The posterior predictive is just like the prior predictive, except that it samples model parameters from the data-informed posterior, rather than the data-ignorant prior
+* Formally, it is the distribution of new datasets when drawing parameters from the posterior
+* The simulation mechanism is 
+  (a) draw model parameters from the posterior
+  (b) simulate a dataset using parameters from (a)
+* The code below fits the three models
+  * We are using the `rstan` package to fit three Bayesian models
+  * The first model `lm` is a Bayesian linear regression, assuming the same slope across all regions
+  * The two other models assume different slopes for different regions, but use the WHO and cluster-based region definitions, respectively
+  * Bayesian regression models that allow different slopes for different groups are called hierarchical models
+  * You do not need to worry about how the `rstan` code, which is sourced into the `stan_model` function, is written. 
+  * It is enough to be able to fit these two types of models as if they are built-in function in R
+
+```{r}
+# Define the input datasets for the lm, region-based, and cluster-based models
+datasets <- list(
+  "lm" = with(GM@data, list(N = length(log_pm25), y = log_pm25, x = log_sat)),
+  "regions" = with(
+    GM@data, 
+    list(N = length(log_pm25), y = log_pm25, x = log_sat, group = super_region, R = n_distinct(super_region))
+  ),
+  "clusters" = with(
+    GM@data, 
+    list(N = length(log_pm25), y = log_pm25, x = log_sat, group = as.integer(cluster_region), R = n_distinct(cluster_region))
+  )
+)
+
+# Define the two types of Bayesian models
+model_def <- list(
+  "lm" = stan_model("https://uwmadison.box.com/shared/static/hoq1whain301bj6gj670itxabnnhvcy7.stan"),
+  "hier" = stan_model("https://uwmadison.box.com/shared/static/lvouz9jj4rbkmrx5osj2dtrhj2ycdll8.stan")
+)
+```
+
+```{r, eval = FALSE}
+# Fit the models above to the three datasets of interest
+controls <- list(max_treedepth = 15, adapt_delta = 0.99)
+models <- list(
+  "lm" = sampling(model_def$lm, data = datasets$lm, chains = 1, control = controls),
+  "regions" = sampling(model_def$hier, data = datasets$regions, chains = 1, control = controls),
+  "clusters" = sampling(model_def$hier, data = datasets$clusters, chains = 1, control = controls)
+)
+```
+
+* The code above takes a little while to run (about 10 minutes for the last two models). 
+* To save some time, you can download the fitted models from the link below
+* The `models` object is a list whose elements are fitted STAN models for the three model definitions above
+* The fitted model objects include posterior samples for the region slopes as well as simulated ground station PM2.5 data, based on those posterior slopes
+
+```{r}
+f <- tempfile()
+download.file("https://uwmadison.box.com/shared/static/x7dotair443mhx34yzie3m3lrsvhk19a.rda", f)
+models <- get(load(f))
+```
+
+* The block below simulates station PM2.5 data from the fitted posterior of the cluster-based model. Note that, compared to the prior predictive, the posterior predictive is much more closely related to the true underlying dataset
+
+```{r, fig.width = 10, fig.height = 6, fig.cap = "Samples from the posterior predictive in the cluster-based model."}
+# extract 12 samples and reshape it to "long" format
+posterior_samples <- as.matrix(models$clusters, pars = "y_sim")[950:961, ] %>%
+  t() %>%
+  as_tibble() %>%
+  bind_cols(GM@data) %>%
+  pivot_longer(V1:V12, names_to = "replicate", values_to = "log_pm25_sim")
+
+ggplot(posterior_samples, aes(log_pm25, log_pm25_sim)) +
+  geom_abline(slope = 1) +
+  geom_point(aes(col = cluster_region), size = 0.4, alpha = 0.1) +
+  scale_color_brewer(palette = "Set2") +
+  labs(x = "True station data", y = "Simulated station data") +
+  facet_wrap(~ replicate, scale = "free_y")
+```
+
+* We can verify that features of the real dataset are accurately captured by features of the posterior predictive
+* One subtlety is that there is a danger of overfitting features in the posterior predictive
+* It is best to choose features of the data that are not directly modeled 
+  * e.g., if you use slope in the model estimation, then don’t evaluate the posterior predictive using the slope, since by definition this will be well-captured
+* In the block below, we compute the skewness for each simulated station dataset from the three different models
+* These skewnesses are plotted as histograms, with the true dataset's skewness indicated by a vertical line
+* It seems that the model that uses clustering to define regions is able to simulate datasets with skewness similar to that in the real dataset
+
+```{r, fig.height = 3, fig.width = 10, fig.cap = "Posterior simulated skewness according to the three different models."}
+apply_stat <- function(x, f) {
+  z <- as.matrix(x, pars = "y_sim")
+  tibble(
+    "replicate" = seq_len(nrow(z)),
+    "statistic" = apply(z, 1, f)
+  )
+}
+
+skew <- function(x) {
+  xdev <- x - mean(x)
+  n <- length(x)
+  r <- sum(xdev^3) / sum(xdev^2)^1.5
+  r * sqrt(n) * (1 - 1/n)^1.5
+}
+
+posteriors <- map_dfr(models, ~ apply_stat(., skew), .id = "model")
+truth <- skew(GM@data$log_pm25)
+ggplot(posteriors, aes(statistic)) +
+  geom_histogram(aes(fill = model), binwidth = 0.01) +
+  geom_vline(xintercept = truth, col = "red") +
+  scale_fill_brewer(palette = "Set3")
+```
+
+
+***
+
+# Pointwise Diagnostics
+Evaluating the fit at particular observations in Bayesian models.
+
+* All the model visualization strategies we’ve looked at in the last few lectures have been dataset-wide
+* That is, we looked at properties of the dataset as a whole, and whether the model made sense globally, across the whole dataset
+* Individual observations might warrant special attention, though
+* The block below loads in the fitted models from the previous set of notes
+		
+```{r}
+downloader <- function(link) {
+  f <- tempfile()
+  download.file(link, f)
+  get(load(f))
+}
+
+models <- downloader("https://uwmadison.box.com/shared/static/x7dotair443mhx34yzie3m3lrsvhk19a.rda")
+GM <- downloader("https://uwmadison.box.com/shared/static/2pzgdu7gyobhl5tezo63tns7by1aiy6d.rda")
+```
+
+* A first diagnostic to consider is the leave-one-out predictive distribution
+* This is the probability $p\left(y_{i} \vert y_{-i}\right)$ of sample $i$ after having fitted a model to all samples except $i$
+* Ideally, most observations in the dataset to have high predictive probability
+  * Note that this can be used for model comparison
+  * Some models might have better per-sample leave-one-out predictive probabilities for almost all
+    observations
+	* This is similar to a leave-one-out residual
+* If we use rstan to fit a Bayesian model, then these leave-one-out probabilities can be estimated using the `loo` function in the `loo` package
+* The code below computes these probabilities for each model, storing the difference in predictive probabilities for models two and three in the `diff23` variable
+
+```{r}
+elpd <- map(models, ~ loo(., save_psis = TRUE)$pointwise[, "elpd_loo"])
+elpd_diffs <- GM@data %>%
+  mutate(
+    ID = row_number(),
+    diff23 = elpd[[3]] - elpd[[2]]
+  )
+
+outliers <- elpd_diffs %>%
+  filter(abs(diff23) > 6)
+```
+
+* We plot the difference between these predictive probabilities below
+* The interpretation is that Ulaanbataar has much higher leave-one-out probability under the cluster-based model, perhaps because that model is able to group the countries with large deserts together with one another
+* On the other hand, Santo Domingo is better modeled by model 2, since it has higher leave-one-out probability in that model
+
+```{r, fig.cap = "The difference in leave one out predictive probabilities for each sample, according to the WHO-region and cluster based hierarchical models."}
+ggplot(elpd_diffs, aes(ID, diff23)) +
+  geom_point(
+    aes(col = super_region_name),
+    size = 0.9, alpha = 0.8
+    ) +
+  geom_text_repel(
+    data = outliers,
+    aes(label = City_locality),
+    size = 3 
+  ) +
+  scale_color_brewer(palette = "Set2") +
+  labs(
+    y = "Influence (Model 2 vs. 3)",
+    col = "WHO Region"
+  )
+```
+
+* Another diagnostic is to consider the influence of an observation
+* Formally, the influence is a measure of how much the posterior predictive distribution changes when we leave one sample out
+* The idea is to measure the difference between the posterior predictives using a form of KL divergence, and note down the observations that lead to a very large difference in divergence
+
+```{r, fig.cap = "Visual intuition about the influence of observations. If the posterior predictive distributions shift substantially when an observation is included or removed, then it is an influential observation.", echo = FALSE}
+include_graphics("https://uwmadison.box.com/shared/static/woojwyyqruo3wrkrhe5y28bz53rwjwng.png")
+```
+
+* When using rstan, the influence measure can be computed by the `psis` function
+* The `pareto_k` diagnostic summarizes how much the posterior predictive shifts when an observation is or isn't included
+* For example, in the figure below, observation 2674 (Ulaanbaatar again) is highly influential
+
+```{r, fig.cap = "The influence of each sample on the final posterior distribution."}
+loglik <- map(models, ~ as.matrix(., pars = "log_lik"))
+kdata <- GM@data %>%
+  mutate(
+    k_hat = psis(loglik[[2]])$diagnostics$pareto_k,
+    Index = row_number()
+  )
+outliers <- kdata %>%
+  filter(k_hat > 0.25)
+
+ggplot(kdata, aes(x = Index, y = k_hat)) + 
+  geom_point(aes(col = super_region_name), size = 0.5, alpha = 0.9) + 
+  scale_color_brewer(palette = "Set2") +
+  geom_text_repel(data = outliers, aes(label = Index)) +
+  labs(y = "k-hat")
+```
+

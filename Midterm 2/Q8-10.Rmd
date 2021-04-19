@@ -1,0 +1,102 @@
+---
+title: "Bolz 8-10"
+author: "Caitlin Bolz"
+date: "4/16/2021"
+output: html_document
+---
+
+```{r message=FALSE}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(gdata)
+```
+
+```{r message=FALSE}
+before = read_csv("before.csv")
+step1 = read_csv("step1.csv")
+step2 = read_csv("step2.csv")
+final = read_csv("final.csv")
+```
+
+## Question 8
+Output for this question is given in *combined*
+```{r}
+my_step1 = before
+my_step1$attribute[is.na(my_step1$attribute)] = "SPELL/TRAP"
+```
+
+```{r}
+att1 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Continuous" & type == "Spell Card") %>% 
+  mutate(type = "Continuous Spell")
+
+att2 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Continuous" & type == "Trap Card") %>% 
+  mutate(type = "Continuous Trap")
+
+att3 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Quick-Play") %>% 
+  mutate(type = "Quick-Play Spell")
+
+att4 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Equip") %>% 
+  mutate(type = "Equip Spell")
+
+att5 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Normal" & type == "Spell Card") %>% 
+  mutate(type = "Normal Spell")
+
+att6 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Normal" & type == "Trap Card") %>% 
+  mutate(type = "Normal Trap")
+
+att7 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Field") %>% 
+  mutate(type = "Field Spell")
+
+att8 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Ritual") %>% 
+  mutate(type = "Ritual Spell")
+
+att9 = my_step1 %>% 
+  filter(attribute == "SPELL/TRAP" & class == "Counter") %>% 
+  mutate(type = "Counter Trap")
+```
+
+```{r message=FALSE}
+comb1 = full_join(att1, att2)
+comb2 = full_join(att3, att4)
+comb3 = full_join(att5, att6)
+
+comb4 = full_join(att7, att8)
+comb5 = full_join(comb4, att9)
+
+comb6 = full_join(comb1, comb2)
+comb7 = full_join(comb3, comb5)
+comb8 = full_join(comb6, comb7)
+
+my_step1 = my_step1[my_step1$type != "Spell Card" & my_step1$type != "Trap Card", ]
+
+combined = full_join(my_step1, comb8) # final output
+```
+
+## Question 9
+Output for this question is given in *my_step2*
+```{r message=FALSE}
+my_step2 = combined %>% group_by(attribute, type) %>% 
+  summarize(n = n(),
+            tcg = mean(!is.na(ban_tcg)),
+            ocg = mean(!is.na(ban_ocg)))
+```
+
+## Question 10
+Output for this question is given in *my_final*
+```{r}
+my_final = my_step2 %>% pivot_longer(c(`tcg`, `ocg`), names_to = "game", values_to = "prop_restricted")
+
+ordered = c("SPELL/TRAP", "DARK", "DIVINE", "EARTH", "FIRE", "LIGHT", "WATER", "WIND")
+
+my_final$attribute = reorder.factor(my_final$attribute, new.order = ordered) 
+my_final = my_final %>% arrange(attribute)
+```
