@@ -1,6 +1,8 @@
 ---
 title: "Week 12 Notes"
 output: html_document
+header-includes:
+   - \DeclareUnicodeCharacter{001B}{}
 ---
 
 # Overview
@@ -15,7 +17,6 @@ An introduction to partial dependence profiles.
 
 ```{r message=FALSE, warning=FALSE}
 library(knitr)
-library(DALEX)
 library(caret)
 library(dplyr)
 library(ggplot2)
@@ -27,6 +28,7 @@ library(dplyr)
 library(ggrepel)
 library(gbm)
 library(loo)
+library(DALEX)
 theme479 <- theme_minimal() + 
   theme(
     panel.grid.minor = element_blank(),
